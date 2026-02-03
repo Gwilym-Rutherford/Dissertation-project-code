@@ -102,10 +102,10 @@ class SensorLoader(DataLoader):
         gyroscope = mat_sensor_base["Gyr"]
 
         return {
-            "StartDateTime": start_date_time,
-            "TimeZone": time_zone,
+            "StartDateTime": str(start_date_time),
+            "TimeZone": str(time_zone),
             "Fs": sample_frequency,
-            "TimeStamp": time_stamp,
+            "TimeStamp": time_stamp.flatten(),
             "Acc": acceleration,
             "Gyr": gyroscope
         }

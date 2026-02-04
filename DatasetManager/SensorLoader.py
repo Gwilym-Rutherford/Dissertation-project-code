@@ -1,33 +1,33 @@
-from DataLoader import DataLoader
-from MetaLoader import MetaLoader
-from Enums.MileStone import MileStone
-from Enums.Day import Day
+from DatasetManager.DataLoader import DataLoader
+from DatasetManager.MetaLoader import MetaLoader
+from DatasetManager.Enums.MileStone import MileStone
+from DatasetManager.Enums.Day import Day
 
 import numpy as np
 import scipy.io as scio
 import os
-
-DEFAULT_DATASET_PATH = os.path.join(os.getcwd(), "Sensor data")
+import json
 
 
 class SensorLoader(DataLoader):
-    def __init__(self, participant_id, path=None):
+    def __init__(self, participant_id, metaloader, path=None):
         super().__init__()
 
         self.participant_id = participant_id
-        metaloader = MetaLoader()
+        self.file_prefix = f"MS{str(self.participant_id)[0:2]}"
+
         if metaloader.get_local_participant(self.participant_id) is None:
             quit(1)
 
-        self.file_prefix = f"MS{str(self.participant_id)[0:2]}"
-        self.base_data_path = os.path.join(
-            DEFAULT_DATASET_PATH, self.file_prefix, "files", str(self.participant_id)
+        if path is None:
+            path = self.curr_file_path
+        self.path = os.path.join(
+            path,
+            "Sensor data",
+            self.file_prefix,
+            "files",
+            str(self.participant_id),
         )
-
-        if not path:
-            self.path = DEFAULT_DATASET_PATH
-        else:
-            self.path = path
 
         if not os.path.isdir(self.path):
             self.path_not_exist(self.path)
@@ -37,11 +37,11 @@ class SensorLoader(DataLoader):
             print("Please provide a valid milestone enum")
 
         self.milestone = milestone.value
-        self.data_path = os.path.join(self.base_data_path, self.milestone)
+        self.data_path = os.path.join(self.path, self.milestone)
 
         return self.path
 
-    def get_milestone_data_path(self, day, milestone=None, dmo=False):
+    def get_sensor_data_paths(self, day, milestone=None, dmo=False):
         try:
             if milestone is not None:
                 self.set_milestone(milestone)
@@ -107,13 +107,26 @@ class SensorLoader(DataLoader):
             "Fs": sample_frequency,
             "TimeStamp": time_stamp.flatten(),
             "Acc": acceleration,
-            "Gyr": gyroscope
+            "Gyr": gyroscope,
         }
-        
+
+    def get_walking_bout_analysis_dmo(self, day, milestone):
+        _, dmo = self.get_sensor_data_paths(day, milestone, dmo=True)
+
+        dmo_path = os.path.join(
+            dmo,
+            f"{milestone.value}_{day.value}_{self.participant_id}_WBASO_Output.json",
+        )
+
+        with open(dmo_path, "r") as json_file:
+            dmo_data = json.load(json_file)
+
+        return dmo_data
+
 
 def main():
     sensorloader = SensorLoader(10376)
-    raw_data, dmo_data = sensorloader.get_milestone_data_path(
+    raw_data, dmo_data = sensorloader.get_sensor_data_paths(
         Day.DAY1, milestone=MileStone.T3, dmo=True
     )
 

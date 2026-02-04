@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import operator
 
+
 class DataLoader(object):
     def __init__(self):
         self.ops = {
@@ -10,6 +11,7 @@ class DataLoader(object):
             "==": operator.eq,
             "!=": operator.ne,
         }
+        self.curr_file_path = os.path.dirname(os.path.abspath(__file__))
 
     def create_csv_data(self, csv_path):
         reader = pd.read_csv(csv_path, chunksize=100000, low_memory=False)
@@ -22,6 +24,11 @@ class DataLoader(object):
 
     def get_csv_column(self, csv_data, column_name):
         return csv_data[column_name].to_list()
+
+    def filter_json_arr(self, json_arr, attr, condition, value):
+        df = pd.DataFrame(json_arr)
+        mask = self.ops[condition](df[attr], value)
+        return df[mask].to_dict(orient="records")
 
     def path_not_exist(self, path):
         print(f"no path found, make sure {path} exists!")

@@ -1,16 +1,12 @@
 from DatasetManager.DataLoader import DataLoader
-from DatasetManager.Enums.MileStone import MileStone
 
 import os
-
-# DEFAULT_DATASET_FILE = "V7.2"
-# DEFAULT_DATASET_PATH = os.path.join(os.getcwd(), DEFAULT_DATASET_FILE)
 
 
 class MetaLoader(DataLoader):
     def __init__(self, path=None):
         super().__init__()
-        
+
         if path is None:
             path = self.curr_file_path
 
@@ -44,22 +40,3 @@ class MetaLoader(DataLoader):
         )
 
         return self.check_empty(milestone_data, "milestone")
-
-
-def main():
-    metaloader = MetaLoader()
-
-    # print(metaloader.metadata)
-    print(metaloader.get_local_participant(10376))
-
-    print(metaloader.get_n_milestone_metadata(10376, MileStone.T1))
-
-    # print(metaloader.get_local_participant(25238))
-
-    print(metaloader.get_n_milestone_metadata(25238, MileStone.T3))
-
-    # print(metaloader.get_all_participant_ids())
-
-
-if __name__ == "__main__":
-    main()

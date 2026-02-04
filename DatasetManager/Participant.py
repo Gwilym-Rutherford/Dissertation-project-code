@@ -2,9 +2,6 @@ from DatasetManager.MetaLoader import MetaLoader
 from DatasetManager.SensorLoader import SensorLoader
 from DatasetManager.DataLoader import DataLoader
 
-from DatasetManager.Enums.Day import Day
-from DatasetManager.Enums.MileStone import MileStone
-
 import os
 
 
@@ -38,10 +35,3 @@ class Participant(DataLoader):
             "infoForAlgo": self.sl.get_info_for_algo(info_data_path),
             "sensorData": self.sl.get_sensor_data(raw_data_path),
         }
-
-
-# pl = ParticipantLoader()
-# data = pl.get_day_milestone_participant_info(Day.DAY1, MileStone.T3, 10376)
-# print(data)
-
-# print(pl.get_participant_sensor_data(Day.DAY1, MileStone.T3, 10376))

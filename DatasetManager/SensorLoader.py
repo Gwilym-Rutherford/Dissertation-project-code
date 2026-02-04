@@ -1,7 +1,5 @@
 from DatasetManager.DataLoader import DataLoader
-from DatasetManager.MetaLoader import MetaLoader
 from DatasetManager.Enums.MileStone import MileStone
-from DatasetManager.Enums.Day import Day
 
 import numpy as np
 import scipy.io as scio
@@ -122,17 +120,3 @@ class SensorLoader(DataLoader):
             dmo_data = json.load(json_file)
 
         return dmo_data
-
-
-def main():
-    sensorloader = SensorLoader(10376)
-    raw_data, dmo_data = sensorloader.get_sensor_data_paths(
-        Day.DAY1, milestone=MileStone.T3, dmo=True
-    )
-
-    sensorloader.show_dir_contents(dmo_data)
-    sensorloader.show_dir_contents(raw_data)
-
-
-if __name__ == "__main__":
-    main()

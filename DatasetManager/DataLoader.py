@@ -1,3 +1,5 @@
+from DatasetManager.helper.Helper import Helper
+
 import pandas as pd
 import os
 import operator
@@ -12,6 +14,10 @@ class DataLoader(object):
             "!=": operator.ne,
         }
         self.curr_file_path = os.path.dirname(os.path.abspath(__file__))
+        
+        self.config = Helper.load_config_yaml(
+            os.path.join(os.getcwd(), "config/config.yaml")
+        )
 
     def create_csv_data(self, csv_path):
         reader = pd.read_csv(csv_path, chunksize=100000, low_memory=False)

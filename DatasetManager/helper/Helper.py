@@ -1,3 +1,6 @@
+import yaml
+import json
+
 class Helper(object):
     
     @classmethod
@@ -8,6 +11,14 @@ class Helper(object):
             else:
                 shape = obj.shape if hasattr(obj, 'shape') else "scalar"
                 print(f"PATH: mat{path} | SHAPE: {shape}")
+
+    @staticmethod
+    def load_config_yaml(yaml_path):
+        with open(yaml_path, "r") as yaml_file:
+            config = yaml.safe_load(yaml_file)
+
+        return config
+    
 
 
 

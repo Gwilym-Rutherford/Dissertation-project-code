@@ -1,22 +1,27 @@
-import torch
 from torch.utils.data import Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-import matplotlib.pyplot as plt
+from DatasetManager.Participant import Participant
 
 
-class FatigueDataset(Dataset):
+class FatigueDMODataset(Dataset):
     def __init__(
         self,
-        fatigue_questionaire,
-        fatigue_results,
+        patient_dmo_features,
+        patient_id,
         transform=None,
         target_transform=None,
     ):
-        self.fatigue_questionaire = fatigue_questionaire
-        self.fatigue_results = fatigue_results
+        self.patient_dmo_features = patient_dmo_features
+        self.patient_id = patient_id
         self.transform = transform
-        self. target_transform = target_transform
+        self.target_transform = target_transform
+
+        self.patient = Participant(self.patient_id)
+        self.fatigue_results = self.patient.get_csv_column(
+            self.patient.filter_csv_data(
+                self.patient.get_participant_metadata(), "MFISTO1N", ">", 0
+            ),
+            "MFISTO1N",
+        )
 
 
     def __len__(self):
@@ -29,6 +34,6 @@ class FatigueDataset(Dataset):
         if self.transform:
             questionaire = self.transform(questionaire)
         if self.target_transform:
-            result = self.target_transform(result) 
+            result = self.target_transform(result)
 
         return questionaire, result

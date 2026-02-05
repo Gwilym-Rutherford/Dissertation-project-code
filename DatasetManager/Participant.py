@@ -6,13 +6,10 @@ import os
 
 
 class Participant(DataLoader):
-    def __init__(self, participant_id, path=None):
+    def __init__(self, participant_id):
         super().__init__()
-        
-        if path is None:
-            self.path = self.curr_file_path
-        else:
-            self.path = path
+
+        self.path = self.config["paths"]["DatasetManager"]
 
         self.participant_id = participant_id
         self.ml = MetaLoader()
@@ -35,3 +32,11 @@ class Participant(DataLoader):
             "infoForAlgo": self.sl.get_info_for_algo(info_data_path),
             "sensorData": self.sl.get_sensor_data(raw_data_path),
         }
+
+    def get_participant_metadata(self):
+        return self.filter_csv_data(
+            self.ml.metadata,
+            "Local.Participant",
+            "==",
+            self.participant_id,
+        )

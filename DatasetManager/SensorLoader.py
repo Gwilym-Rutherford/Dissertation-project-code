@@ -8,7 +8,7 @@ import json
 
 
 class SensorLoader(DataLoader):
-    def __init__(self, participant_id, metaloader, path=None):
+    def __init__(self, participant_id, metaloader):
         super().__init__()
 
         self.participant_id = participant_id
@@ -17,10 +17,8 @@ class SensorLoader(DataLoader):
         if metaloader.get_local_participant(self.participant_id) is None:
             quit(1)
 
-        if path is None:
-            path = self.curr_file_path
         self.path = os.path.join(
-            path,
+            self.config["paths"]["DatasetManager"],
             "Sensor data",
             self.file_prefix,
             "files",

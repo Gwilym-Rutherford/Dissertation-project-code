@@ -4,14 +4,11 @@ import os
 
 
 class MetaLoader(DataLoader):
-    def __init__(self, path=None):
+    def __init__(self):
         super().__init__()
 
-        if path is None:
-            path = self.curr_file_path
-
         self.path = os.path.join(
-            path,
+            self.config["paths"]["DatasetManager"],
             "V7.2/Main datasets for analysis T1-T5/MS_dataset_v.7.2.csv",
         )
 

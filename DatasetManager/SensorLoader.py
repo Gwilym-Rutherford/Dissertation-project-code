@@ -4,7 +4,7 @@ from DatasetManager.Enums.MileStone import MileStone
 import numpy as np
 import scipy.io as scio
 import os
-import json
+import orjson
 
 
 class SensorLoader(DataLoader):
@@ -64,8 +64,7 @@ class SensorLoader(DataLoader):
                 return milestone_path
 
         except IndexError:
-            print(f"No day {day.value} found")
-            quit(1)
+            return None
 
     def get_info_for_algo(self, info_for_algo_path):
         mat = scio.loadmat(info_for_algo_path)
@@ -115,6 +114,6 @@ class SensorLoader(DataLoader):
         )
 
         with open(dmo_path, "r") as json_file:
-            dmo_data = json.load(json_file)
+            dmo_data = orjson.loads(json_file.read())
 
         return dmo_data

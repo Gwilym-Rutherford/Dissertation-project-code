@@ -18,9 +18,14 @@ class Participant(DataLoader):
     def get_day_milestone_participant_info(self, day, milestone):
 
         metadata = self.ml.get_local_participant(self.participant_id)
-        sensordata, sensordmo = self.sl.get_sensor_data_paths(day, milestone, dmo=True)
+        sensordata = self.sl.get_sensor_data_paths(day, milestone, dmo=True)
 
-        return {"metadata": metadata, "sensordata": sensordata, "sensordmo": sensordmo}
+        if sensordata:
+            sensordata, sensordmo = sensordata
+            return {"metadata": metadata, "sensordata": sensordata, "sensordmo": sensordmo}
+        else:
+            return None
+
 
     def get_participant_sensor_data(self, day, milestone):
         data = self.get_day_milestone_participant_info(day, milestone)
@@ -40,3 +45,6 @@ class Participant(DataLoader):
             "==",
             self.participant_id,
         )
+
+    def get_select_dmo_data(self, dmo_features):
+        self.sl.get_walking_bout_analysis_dmo()

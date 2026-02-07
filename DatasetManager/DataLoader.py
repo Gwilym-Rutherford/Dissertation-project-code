@@ -37,8 +37,7 @@ class DataLoader(object):
         return df[mask].to_dict(orient="records")
 
     def path_not_exist(self, path):
-        print(f"no path found, make sure {path} exists!")
-        quit(1)
+        return None
 
     def check_empty(self, data, data_type="data"):
         if data.empty:

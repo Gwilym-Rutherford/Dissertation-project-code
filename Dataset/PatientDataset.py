@@ -1,6 +1,8 @@
 from torch.utils.data import Dataset
 from DatasetManager.Participant import Participant
 
+import torch
+
 
 class FatigueDMODataset(Dataset):
     def __init__(
@@ -22,13 +24,14 @@ class FatigueDMODataset(Dataset):
             ),
             "MFISTO1N",
         )
+        self.fatigue_results = torch.tensor(self.fatigue_results)
 
 
     def __len__(self):
         return len(self.fatigue_results)
 
     def __getitem__(self, idx):
-        questionaire = self.questionaire[idx]
+        questionaire = idx
         result = self.fatigue_results[idx]
 
         if self.transform:

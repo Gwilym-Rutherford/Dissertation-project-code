@@ -5,7 +5,7 @@ import pandas
 
 
 @dataclass
-class Patient:
+class _Patient:
     id: int
     meta_data: pandas.DataFrame
     sensor_dmo_data: torch.tensor

@@ -1,5 +1,3 @@
-from operator import itemgetter
-
 import scipy.io as scio
 import pandas as pd
 import os
@@ -8,13 +6,13 @@ import torch
 
 
 class _SensorLoader:
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path: str) -> None:
         self.sensor_path = os.path.join(
             dataset_path,
             "Sensor data",
         )
 
-    def get_patient_dmo_data(self, id, features=None):
+    def get_patient_dmo_data(self, id: int, features: list[str] | None = None) -> dict:
         file_prefix = self.file_prefix = f"MS{str(id)[0:2]}"
         patient_path = os.path.join(
             self.sensor_path, file_prefix, "files", str(id), "dmos"
@@ -44,7 +42,7 @@ class _SensorLoader:
 
         return dmo_data
 
-    def get_patient_raw_data(self, id):
+    def get_patient_raw_data(self, id: int) -> dict:
         file_prefix = self.file_prefix = f"MS{str(id)[0:2]}"
         patient_path = os.path.join(self.sensor_path, file_prefix, "files", str(id))
 
@@ -63,12 +61,14 @@ class _SensorLoader:
 
         return raw_data
 
-    def _average_features_per_day(self, data, features):
-        df = pd.DataFrame(data)    
+    def _average_features_per_day(
+        self, data: dict, features: list[str]
+    ) -> torch.tensor:
+        df = pd.DataFrame(data)
         feature_tensor = torch.from_numpy(df[features].values)
         return feature_tensor.mean(dim=0)
 
-    def _extract_raw_data(self, path):
+    def _extract_raw_data(self, path: str) -> dict | None:
         if not os.path.isfile(path):
             return None
 

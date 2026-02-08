@@ -1,8 +1,10 @@
 from collections import namedtuple
+from DatasetManager.helper.enum_def import Site
 
-import os
 import pandas as pd
+import os
 import operator
+import torch
 
 
 class _MetadataLoader:
@@ -33,9 +35,15 @@ class _MetadataLoader:
             return None
         return processed_data
 
-    def get_all_ids(self) -> list[int]:
+    def get_all_ids(self) -> torch.Tensor:
         ids = self.metadata["Local.Participant"].to_list()
-        return list(set(ids))
+        return torch.tensor(list(set(ids)))
+
+    def get_all_ids_by_site(self, site: Site) -> torch.Tensor:
+        ids = self.get_all_ids()
+        prefixes = ids.div(1000).floor()
+        mask = prefixes == int(site.value)
+        return ids[mask]
 
     def get_patient_data(self, id: int) -> pd.DataFrame | None:
         Condition = namedtuple("Condition", "column operation value")

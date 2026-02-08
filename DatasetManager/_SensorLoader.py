@@ -1,3 +1,5 @@
+from DatasetManager.helper.named_tuple_def import RawData
+
 import scipy.io as scio
 import pandas as pd
 import os
@@ -38,11 +40,14 @@ class _SensorLoader:
                     ]["LowerBack"]["WB"]
                     dmo_data[dir_] = self._average_features_per_day(json_data, features)
             else:
-                dmo_data[dir_] = None
+                dmo_data[dir_] = torch.zeros(len(features))
 
         return dmo_data
 
-    def get_patient_raw_data(self, id: int) -> dict:
+    def get_patient_raw_data(self, id: int, skip: bool = False) -> dict | None:
+        if skip:
+            return None
+
         file_prefix = self.file_prefix = f"MS{str(id)[0:2]}"
         patient_path = os.path.join(self.sensor_path, file_prefix, "files", str(id))
 
@@ -63,12 +68,12 @@ class _SensorLoader:
 
     def _average_features_per_day(
         self, data: dict, features: list[str]
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         df = pd.DataFrame(data)
         feature_tensor = torch.from_numpy(df[features].values)
         return feature_tensor.mean(dim=0)
 
-    def _extract_raw_data(self, path: str) -> dict | None:
+    def _extract_raw_data(self, path: str) -> RawData | None:
         if not os.path.isfile(path):
             return None
 
@@ -85,11 +90,11 @@ class _SensorLoader:
         acceleration = torch.tensor(mat_sensor_base["Acc"])
         gyroscope = torch.tensor(mat_sensor_base["Gyr"])
 
-        return {
-            "StartDateTime": str(start_date_time),
-            "TimeZone": str(time_zone),
-            "Fs": sample_frequency,
-            "TimeStamp": time_stamp.flatten(),
-            "Acc": acceleration,
-            "Gyr": gyroscope,
-        }
+        return RawData(
+            start_date_time=str(start_date_time),
+            time_zone=str(time_zone),
+            fs=sample_frequency,
+            time_stamp=time_stamp.flatten(),
+            acc=acceleration,
+            gyr=gyroscope,
+        )

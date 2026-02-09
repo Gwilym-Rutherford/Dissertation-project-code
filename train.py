@@ -11,13 +11,15 @@ dmo_features = [
 
 d = MSDataLoader()
 
-patient = d.get_patient(10376, dmo_features=dmo_features, skip_raw=True)
+patient = d.get_patient(10376, dmo_features=dmo_features, skip_raw=False)
 
-print(d.ml.get_all_ids_by_site(Site.MS10))
 
-# print(patient.meta_data)
-# print(patient.sensor_dmo_data)
-# print(patient.sensor_raw_data)
+
+#print(d.ml.get_all_ids_by_site(Site.MS10))
+
+#print(patient.meta_data)
+#print(patient.sensor_dmo_data)
+#print(patient.sensor_raw_data["T3"])
 
 ml = d.ml
 

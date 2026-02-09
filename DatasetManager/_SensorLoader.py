@@ -1,10 +1,11 @@
-from DatasetManager.helper.named_tuple_def import RawData
-
 import scipy.io as scio
 import pandas as pd
+import numpy as np
+import pyarrow.parquet as pq
 import os
 import orjson
 import torch
+import gc
 
 
 class _SensorLoader:
@@ -44,7 +45,9 @@ class _SensorLoader:
 
         return dmo_data
 
-    def get_patient_raw_data(self, id: int, skip: bool = False) -> dict | None:
+    def get_patient_raw_data(
+        self, id: int, skip: bool = False, write_parquet=False
+    ) -> dict | None:
         if skip:
             return None
 
@@ -61,8 +64,11 @@ class _SensorLoader:
             for day in day_list:
                 if day == "Lab":
                     continue
-                path = os.path.join(patient_path, milestone, day, "data.mat")
-                raw_data[milestone][day] = self._extract_raw_data(path)
+                path = os.path.join(patient_path, milestone, day)
+                raw_data[milestone][day] = self._extract_raw_data(
+                    path, write_parquet=write_parquet
+                )
+                gc.collect()
 
         return raw_data
 
@@ -73,28 +79,51 @@ class _SensorLoader:
         feature_tensor = torch.from_numpy(df[features].values)
         return feature_tensor.mean(dim=0)
 
-    def _extract_raw_data(self, path: str) -> RawData | None:
-        if not os.path.isfile(path):
-            return None
+    def _extract_raw_data(self, path: str, write_parquet=False) -> pd.DataFrame | None:
+        parquet_file = os.path.join(path, "data.parquet")
+        mat_file = os.path.join(path, "data.mat")
 
-        mat = scio.loadmat(path)
-        mat_sensor_base = mat["data"][0][0]["TimeMeasure1"][0][0]["Recording1"][0][0]
+        if os.path.isfile(parquet_file):
+            return pq.read_table(parquet_file).to_pandas()
 
-        start_date_time = mat_sensor_base["StartDateTime"][0]
-        time_zone = mat_sensor_base["TimeZone"][0]
+        if os.path.isfile(mat_file):
+            mat = scio.loadmat(mat_file)
+            mat_sensor_base = mat["data"][0][0]["TimeMeasure1"][0][0]["Recording1"][0][
+                0
+            ]
 
-        mat_sensor_base = mat_sensor_base["SU"][0][0]["LowerBack"][0][0]
+            start_date_time = mat_sensor_base["StartDateTime"][0]
+            time_zone = mat_sensor_base["TimeZone"][0]
 
-        sample_frequency = mat_sensor_base["Fs"][0][0]
-        time_stamp = torch.tensor(mat_sensor_base["Timestamp"])
-        acceleration = torch.tensor(mat_sensor_base["Acc"])
-        gyroscope = torch.tensor(mat_sensor_base["Gyr"])
+            mat_sensor_base = mat_sensor_base["SU"][0][0]["LowerBack"][0][0]
 
-        return RawData(
-            start_date_time=str(start_date_time),
-            time_zone=str(time_zone),
-            fs=sample_frequency,
-            time_stamp=time_stamp.flatten(),
-            acc=acceleration,
-            gyr=gyroscope,
-        )
+            sample_frequency = mat_sensor_base["Fs"][0][0]
+            time_stamp = np.array(mat_sensor_base["Timestamp"]).flatten()
+            acceleration = np.array(mat_sensor_base["Acc"])
+            gyroscope = np.array(mat_sensor_base["Gyr"])
+
+            raw_metadata = {
+                "start_date_time": str(start_date_time),
+                "time_zone": str(time_zone),
+                "fs": str(sample_frequency),
+            }
+
+            raw_data = {
+                "time_stamp": time_stamp,
+                "acc_x": acceleration[:, 0],
+                "acc_y": acceleration[:, 1],
+                "acc_z": acceleration[:, 2],
+                "gyr_x": gyroscope[:, 0],
+                "gyr_y": gyroscope[:, 1],
+                "gyr_z": gyroscope[:, 2],
+            }
+
+            raw_data_df = pd.DataFrame(raw_data)
+
+            if write_parquet:
+                raw_data_df.to_parquet(parquet_file, index=False)
+
+                with open(os.path.join(path, "metadata.json"), "wb") as meta:
+                    meta.write(orjson.dumps(raw_metadata))
+
+            return raw_data_df

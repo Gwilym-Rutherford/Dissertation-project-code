@@ -19,11 +19,15 @@ class MSDataLoader:
         return self.ml.metadata
 
     def get_patient(
-        self, id: int, dmo_features: list[str] | None = None, skip_raw: bool = False
+        self,
+        id: int,
+        dmo_features: list[str] | None = None,
+        skip_raw: bool = False,
+        write_parquet=False,
     ) -> _Patient:
         return _Patient(
             id,
             self.ml.get_patient_data(id),
             self.sl.get_patient_dmo_data(id, dmo_features),
-            self.sl.get_patient_raw_data(id, skip=skip_raw),
+            self.sl.get_patient_raw_data(id, skip=skip_raw, write_parquet=False),
         )

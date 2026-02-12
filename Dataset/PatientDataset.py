@@ -1,42 +1,44 @@
 from torch.utils.data import Dataset
-from DatasetManager.Participant import Participant
+from DatasetManager._Patient import _Patient
+from typing import TypeAlias
+from DatasetManager.helper.enum_def import MileStone, Day
+from collections.abc import Callable
 
 import torch
+
+patients: TypeAlias = list[_Patient]
 
 
 class FatigueDMODataset(Dataset):
     def __init__(
         self,
-        patient_dmo_features,
-        patient_id,
-        transform=None,
-        target_transform=None,
+        patients: patients,
+        milestone: MileStone,
+        n_features: int,
+        transform: Callable = None,
+        target_transform: Callable = None,
     ):
-        self.patient_dmo_features = patient_dmo_features
-        self.patient_id = patient_id
+        self.patients = patients
+        self.milestone = milestone
+        self.n_features = n_features
         self.transform = transform
         self.target_transform = target_transform
 
-        self.patient = Participant(self.patient_id)
-        self.fatigue_results = self.patient.get_csv_column(
-            self.patient.filter_csv_data(
-                self.patient.get_participant_metadata(), "MFISTO1N", ">", 0
-            ),
-            "MFISTO1N",
-        )
-        self.fatigue_results = torch.tensor(self.fatigue_results)
-
-
     def __len__(self):
-        return len(self.fatigue_results)
+        return len(self.patients)
 
     def __getitem__(self, idx):
-        questionaire = idx
-        result = self.fatigue_results[idx]
+        fatigue = self.patients[idx].get_fatigue_at_milestone(self.milestone)
+        dmo_data = self.patients[idx].sensor_dmo_data
+
+        if dmo_data is None:
+            dmo_data = torch.zeros(
+                (int(self.milestone.value[-1])) * len(Day), self.n_features
+            )
 
         if self.transform:
-            questionaire = self.transform(questionaire)
+            dmo_data = self.transform(dmo_data)
         if self.target_transform:
-            result = self.target_transform(result)
+            fatigue = self.target_transform(fatigue)
 
-        return questionaire, result
+        return dmo_data, fatigue

@@ -1,3 +1,5 @@
+from DatasetManager.helper.enum_def import Day, MileStone
+
 import scipy.io as scio
 import pandas as pd
 import numpy as np
@@ -15,7 +17,9 @@ class _SensorLoader:
             "Sensor data",
         )
 
-    def get_patient_dmo_data(self, id: int, features: list[str] | None = None) -> dict:
+    def get_patient_dmo_data(
+        self, id: int, features: list[str], milestone: MileStone
+    ) -> torch.Tensor:
         file_prefix = self.file_prefix = f"MS{str(id)[0:2]}"
         patient_path = os.path.join(
             self.sensor_path, file_prefix, "files", str(id), "dmos"
@@ -24,26 +28,32 @@ class _SensorLoader:
         if not os.path.isdir(patient_path):
             return None
 
-        sub_dir = os.listdir(patient_path)
+        # Find solution to make this dmo_tensor var the correct size relative to the milestone that is wanted
+        milestone_proportion = [i for i, x in enumerate(MileStone) if milestone == x][
+            0
+        ] + 1
+        dmo_tensor = torch.zeros(len(Day) * milestone_proportion, len(features))
 
-        dmo_data = {}
-        for dir_ in sub_dir:
-            path = os.path.join(patient_path, dir_, f"{dir_}_{id}_WBASO_Output.json")
-            if os.path.isfile(path):
-                with open(path, "r") as json:
-                    json_data = orjson.loads(json.read())
+        for m_index, milestone in enumerate(list(MileStone)[:milestone_proportion]):
+            for d_index, day in enumerate(Day):
+                tensor_index = (m_index * len(Day)) + d_index
+                dir_name = f"{milestone.value}_{day.value}"
+                path = path = os.path.join(
+                    patient_path, dir_name, f"{dir_name}_{id}_WBASO_Output.json"
+                )
 
-                if not features:
-                    dmo_data[dir_] = json_data
-                else:
+                if os.path.isfile(path):
+                    with open(path, "r") as json:
+                        json_data = orjson.loads(json.read())
+
                     json_data = json_data["WBASO_Output"]["TimeMeasure1"]["Recording1"][
                         "SU"
                     ]["LowerBack"]["WB"]
-                    dmo_data[dir_] = self._average_features_per_day(json_data, features)
-            else:
-                dmo_data[dir_] = torch.zeros(len(features))
+                    dmo_tensor[tensor_index] = self._average_features_per_day(
+                        json_data, features
+                    )
 
-        return dmo_data
+        return dmo_tensor
 
     def get_patient_raw_data(
         self, id: int, skip: bool = False, write_parquet=False

@@ -12,7 +12,7 @@ class Patient:
     id: int
     meta_data: pandas.DataFrame | None
     sensor_dmo_data: CSVData | None
-    sensor_dmo_data_tensor: torch.Tensor | None
+    #sensor_dmo_data_tensor: torch.Tensor | None
     sensor_raw_data: dict[str, dict[str, RawData]] | None
 
     def get_fatigue_at_milestone(self, milestone: MileStone) -> float:

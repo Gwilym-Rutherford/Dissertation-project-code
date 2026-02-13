@@ -1,11 +1,14 @@
-from typing import TypeAlias
-from .Patient import Patient
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .Patient import Patient
 
 import torch
 import pandas
 
-Ids: TypeAlias = torch.Tensor
-Patients: TypeAlias = dict[int, Patient]
+type Ids = torch.Tensor
+type Patients = dict[int, Patient]
 
-CSVData: TypeAlias = pandas.DataFrame
-DMOFeatures: TypeAlias = list[str] | None
+type CSVData = pandas.DataFrame
+type DMOFeatures = list[str] | None

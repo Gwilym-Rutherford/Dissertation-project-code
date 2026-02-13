@@ -1,2 +1,4 @@
 paths:
-    DatasetManager: "/home/gwilym-rutherford/Documents/Year 3 Tuos/dissertation/Workspace/Experiment 1/DatasetManager"
+    data_path: "/home/gwilym-rutherford/Documents/Year 3 Tuos/dissertation/Workspace/Experiment 1/data"
+    main_dataset_path: "/home/gwilym-rutherford/Documents/Year 3 Tuos/dissertation/Workspace/Experiment 1/data/V7.2/Main datasets for analysis T1-T5/MS_dataset_v.7.2.csv"
+    dmo_data_path: "/home/gwilym-rutherford/Documents/Year 3 Tuos/dissertation/Workspace/Experiment 1/data/V7.3/T1-T5 Cleaned DMO Data"

@@ -1,16 +1,18 @@
 from dataclasses import dataclass
 from DatasetManager.helper.named_tuple_def import RawData
 from DatasetManager.helper.enum_def import MileStone
+from .types import CSVData
 
 import torch
 import pandas
 
 
 @dataclass
-class _Patient:
+class Patient:
     id: int
     meta_data: pandas.DataFrame | None
-    sensor_dmo_data: torch.Tensor | None
+    sensor_dmo_data: CSVData | None
+    sensor_dmo_data_tensor: torch.Tensor | None
     sensor_raw_data: dict[str, dict[str, RawData]] | None
 
     def get_fatigue_at_milestone(self, milestone: MileStone) -> float:

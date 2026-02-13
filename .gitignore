@@ -216,7 +216,9 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Dataset
-V7.2
+V7.2/
+V7.3/
 Sensor data/
+data/
 
-rewrite
+temp

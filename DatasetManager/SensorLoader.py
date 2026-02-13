@@ -1,4 +1,7 @@
-from DatasetManager.helper.enum_def import Day, MileStone
+from .helper.enum_def import MileStone
+from .helper.named_tuple_def import Condition
+from .base import BaseLoader
+from .types import DMOFeatures
 
 import scipy.io as scio
 import pandas as pd
@@ -10,50 +13,33 @@ import torch
 import gc
 
 
-class _SensorLoader:
-    def __init__(self, dataset_path: str) -> None:
-        self.sensor_path = os.path.join(
-            dataset_path,
-            "Sensor data",
-        )
+class SensorLoader(BaseLoader):
+    def __init__(self, config_path: str) -> None:
+        super().__init__(config_path)
+        self.dmo_path = self.config["paths"]["dmo_data_path"]
 
     def get_patient_dmo_data(
-        self, id: int, features: list[str], milestone: MileStone
+        self, id: int, features: DMOFeatures, milestone: MileStone
     ) -> torch.Tensor:
-        file_prefix = self.file_prefix = f"MS{str(id)[0:2]}"
-        patient_path = os.path.join(
-            self.sensor_path, file_prefix, "files", str(id), "dmos"
+        dir_list = os.listdir(self.dmo_path)
+        milestone_dir = [x for x in dir_list if x[:2] == milestone.value][0]
+
+        milestone_list = os.listdir(os.path.join(self.dmo_path, milestone_dir))
+        csv_file_name = [x for x in milestone_list if "daily_agg_all" in x][0]
+
+        csv_path = os.path.join(self.dmo_path, milestone_dir, csv_file_name)
+
+        reader = pd.read_csv(csv_path, chunksize=100000, low_memory=False)
+        dmo_reader = pd.concat(reader, ignore_index=True)
+
+        filtered_data = self.filter_csv_data(
+            dmo_reader, Condition("participant_id", "==", id)
         )
 
-        if not os.path.isdir(patient_path):
+        if filtered_data is None:
             return None
 
-        # Find solution to make this dmo_tensor var the correct size relative to the milestone that is wanted
-        milestone_proportion = [i for i, x in enumerate(MileStone) if milestone == x][
-            0
-        ] + 1
-        dmo_tensor = torch.zeros(len(Day) * milestone_proportion, len(features))
-
-        for m_index, milestone in enumerate(list(MileStone)[:milestone_proportion]):
-            for d_index, day in enumerate(Day):
-                tensor_index = (m_index * len(Day)) + d_index
-                dir_name = f"{milestone.value}_{day.value}"
-                path = path = os.path.join(
-                    patient_path, dir_name, f"{dir_name}_{id}_WBASO_Output.json"
-                )
-
-                if os.path.isfile(path):
-                    with open(path, "r") as json:
-                        json_data = orjson.loads(json.read())
-
-                    json_data = json_data["WBASO_Output"]["TimeMeasure1"]["Recording1"][
-                        "SU"
-                    ]["LowerBack"]["WB"]
-                    dmo_tensor[tensor_index] = self._average_features_per_day(
-                        json_data, features
-                    )
-
-        return dmo_tensor
+        return self.filter_csv_column(filtered_data, features, keep_id=True)
 
     def get_patient_raw_data(
         self, id: int, skip: bool = False, write_parquet=False

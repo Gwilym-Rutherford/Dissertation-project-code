@@ -1,11 +1,14 @@
-from DatasetManager import MSDataLoader, MileStone, Site
+from DatasetManager import MSDataLoader, MileStone, Site, SplitRatio, Condition
+from DatasetManager.helper.transforms import Transform
+from Dataset.PatientDataset import FatigueDMODataset
 
-# from Dataset.PatientDataset import FatigueDMODataset
-# from torch.utils.data import DataLoader
+import math
+
+from torch.utils.data import DataLoader
 
 
 CONFIG_PATH = "config/config.yaml"
-MILESTON = MileStone.T3
+MILESTON = MileStone.T2
 SITE = Site.MS10
 BATCH_SIZE = 1
 
@@ -18,42 +21,30 @@ dmo_features = [
 ]
 
 ms_dl = MSDataLoader(CONFIG_PATH)
-# patient_10376 = ms_dl.get_patient(10376, MileStone.T1, dmo_features, skip_raw=True)
-# print(patient_10376)
+ml = ms_dl.ml
 
-# patient_10377 = ms_dl.get_patient(10377, MileStone.T1, dmo_features, skip_raw=True)
-# print(patient_10377)
+condition_value = MILESTON.value.lower()
+f_ids = ms_dl.ml.filter_csv_data(
+    ml.metadata, Condition("visit.number", "==", condition_value)
+)
+f_ids_site = ml.filter_by_site(SITE, ml.get_all_ids(f_ids))
 
-ms10_patients = ms_dl.instantiate_patients(
-    ms_dl.ml.filter_by_site(Site.MS10, ms_dl.ml.get_all_ids()),
-    dmo_features,
-    MileStone.T1,
+
+training, validation, test = ms_dl.split_data(
+    f_ids_site, SplitRatio(training=0.7, validation=0.15, test=0.15)
 )
 
-print(ms10_patients[10376].sensor_dmo_data)
+training_patients = ms_dl.instantiate_patients(training, dmo_features, MILESTON)
+validation_patients = ms_dl.instantiate_patients(validation, dmo_features, MILESTON)
+test_patients = ms_dl.instantiate_patients(test, dmo_features, MILESTON)
 
+training_data = FatigueDMODataset(
+    training_patients, MILESTON, len(dmo_features), transform=Transform.dmo_scale
+)
 
-# ms_dl = MSDataLoader()
-# ml = ms_dl.ml
+training_dataloader = DataLoader(training_data, batch_size=BATCH_SIZE)
 
-# condition_value = MILESTON.value.lower()
-# f_ids = ms_dl.filter_csv_data(
-#     ml.metadata, Condition("visit.number", "==", condition_value)
-# )
-# f_ids_site = ml.filter_by_site(SITE, ml.get_all_ids(f_ids))
-
-
-# training, validation, test = ml.split_data(
-#     f_ids_site, SplitRatio(training=0.7, validation=0.15, test=0.15)
-# )
-
-# training_patients = ms_dl.instantiate_patients(training, dmo_features, MILESTON)
-# validation_patients = ms_dl.instantiate_patients(validation, dmo_features, MILESTON)
-# test_patients = ms_dl.instantiate_patients(test, dmo_features, MILESTON)
-
-# training_data = FatigueDMODataset(training_patients, MILESTON, len(dmo_features))
-
-# training_dataloader = DataLoader(training_data, batch_size=BATCH_SIZE)
-
-# for batch, (X, y) in enumerate(training_dataloader):
-#     print(f"batch: {batch}\ninput_data: {X}\ntarget_data: {y}")
+for batch, (X, y) in enumerate(training_dataloader):
+    if math.isnan(y.item()) or X.shape == (1, 1):
+        continue
+    print(f"batch: {batch}\ninput_data: {X}\ntarget_data: {y.item()}")

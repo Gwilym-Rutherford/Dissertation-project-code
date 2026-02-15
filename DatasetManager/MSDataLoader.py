@@ -1,6 +1,7 @@
 from .Patient import Patient
 from .SensorLoader import SensorLoader
 from .MetaLoader import MetadataLoader
+from .DMOLoader import DMOLoader
 from .helper.enum_def import MileStone
 from .helper.named_tuple_def import SplitData, SplitRatio
 from .types import Ids, Patients, DMOFeatures, CSVData
@@ -12,6 +13,7 @@ class MSDataLoader:
     def __init__(self, config_path) -> None:
         self.ml = MetadataLoader(config_path)
         self.sl = SensorLoader(config_path)
+        self.dl = DMOLoader(config_path)
 
     def get_metadata(self) -> CSVData:
         return self.ml.metadata
@@ -27,17 +29,19 @@ class MSDataLoader:
         return Patient(
             id,
             self.ml.get_patient_data(id),
-            self.sl.get_patient_dmo_data(id, dmo_features, milestone),
+            self.dl.get_patient_dmo_data(id, dmo_features, milestone),
             self.sl.get_patient_raw_data(id, skip=skip_raw, write_parquet=False),
         )
 
     def instantiate_patients(
         self, ids: Ids, dmo_features: DMOFeatures, milestone: MileStone
     ) -> Patients:
-        patients = {}
+        patients = []
         for id in ids:
-            patients[id.item()] = self.get_patient(
-                int(id), milestone, dmo_features=dmo_features, skip_raw=True
+            patients.append(
+                self.get_patient(
+                    int(id), milestone, dmo_features=dmo_features, skip_raw=True
+                )
             )
 
         return patients

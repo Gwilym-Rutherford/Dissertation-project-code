@@ -1,7 +1,6 @@
 from .helper.enum_def import MileStone
 from .helper.named_tuple_def import Condition
 from .base import BaseLoader
-from .types import DMOFeatures
 
 import scipy.io as scio
 import pandas as pd
@@ -16,30 +15,6 @@ import gc
 class SensorLoader(BaseLoader):
     def __init__(self, config_path: str) -> None:
         super().__init__(config_path)
-        self.dmo_path = self.config["paths"]["dmo_data_path"]
-
-    def get_patient_dmo_data(
-        self, id: int, features: DMOFeatures, milestone: MileStone
-    ) -> torch.Tensor:
-        dir_list = os.listdir(self.dmo_path)
-        milestone_dir = [x for x in dir_list if x[:2] == milestone.value][0]
-
-        milestone_list = os.listdir(os.path.join(self.dmo_path, milestone_dir))
-        csv_file_name = [x for x in milestone_list if "daily_agg_all" in x][0]
-
-        csv_path = os.path.join(self.dmo_path, milestone_dir, csv_file_name)
-
-        reader = pd.read_csv(csv_path, chunksize=100000, low_memory=False)
-        dmo_reader = pd.concat(reader, ignore_index=True)
-
-        filtered_data = self.filter_csv_data(
-            dmo_reader, Condition("participant_id", "==", id)
-        )
-
-        if filtered_data is None:
-            return None
-
-        return self.filter_csv_column(filtered_data, features, keep_id=True)
 
     def get_patient_raw_data(
         self, id: int, skip: bool = False, write_parquet=False

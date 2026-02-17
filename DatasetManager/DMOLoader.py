@@ -34,7 +34,7 @@ class DMOLoader(BaseLoader):
         )
 
         if filtered_data is None:
-            return None
+            return torch.tensor([-1])
 
         dmo_dataframe = self.filter_csv_column(filtered_data, features, keep_id=False)
         dmo_dataframe.fillna(MASK_VALUE, inplace=True)
@@ -47,5 +47,8 @@ class DMOLoader(BaseLoader):
             dmo_dataframe = pd.concat([padding, dmo_dataframe], axis=0)
 
         dmo_tensor = torch.from_numpy(dmo_dataframe.to_numpy())
+
+        if dmo_tensor is None:
+            return torch.tensor([-1])
 
         return dmo_tensor

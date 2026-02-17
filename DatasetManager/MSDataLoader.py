@@ -57,3 +57,19 @@ class MSDataLoader:
         return SplitData(
             *torch.split(data, [training_split, validation_split, test_split])
         )
+
+    def train_validation_test(
+        self,
+        ids: Ids,
+        split: SplitRatio,
+        dmo_features: DMOFeatures,
+        milestone: MileStone,
+    ) -> tuple[Patients, Patients, Patients]:
+
+        training, validation, test = self.split_data(ids, split)
+
+        training_patients = self.instantiate_patients(training, dmo_features, milestone)
+        validation_patients = self.instantiate_patients(validation, dmo_features, milestone)
+        test_patients = self.instantiate_patients(test, dmo_features, milestone)
+
+        return training_patients, validation_patients, test_patients

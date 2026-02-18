@@ -226,3 +226,6 @@ temp
 
 # documentation
 docs/
+
+# wandb
+wandb/

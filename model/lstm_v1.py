@@ -6,7 +6,7 @@ import torch.nn as nn
 # the final output should be from the short term memory
 
 
-class Exp1Model(nn.Module):
+class DMOLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, output_size):
         super().__init__()
 

@@ -29,3 +29,7 @@ class Transform:
         mask_concat = torch.concatenate((dmo_data, mask_boolean), dim=1)
 
         return mask_concat
+
+    def dmo_label_normalise(dmo_label: DMOTensor) -> DMOTensor:
+        max_score = 21
+        return dmo_label / max_score * 5

@@ -1,15 +1,14 @@
-from DatasetManager import MSDataLoader, MileStone, Site, SplitRatio, Condition
-from DatasetManager.helper.transforms import Transform
-from Dataset.PatientDataset import FatigueDMODataset
+from DatasetManager import MSDataLoader, MileStone, Site
 from torch.optim import Adam
 from torch.nn import HuberLoss
-from torchvision.transforms import Compose
-from exp1_model import Exp1Model
+from model.lstm_v1 import DMOLSTM
 
+import numpy as np
 import torch
+import wandb
 
-
-from torch.utils.data import DataLoader
+# wandb initialisation
+wandb.init(project="LSTM on DMO data")
 
 # setup constants
 dmo_features = [
@@ -34,51 +33,25 @@ BATCH_DIM = 1
 
 LEARNING_RATE = 1e-4
 
-EPOCHS = 100
+EPOCHS = 1000
 
-# get all ms data
+# get dmo patient dataloaders
 ms_dl = MSDataLoader(CONFIG_PATH)
-ml = ms_dl.ml
 
-condition_value = MILESTON.value.lower()
-f_ids = ms_dl.ml.filter_csv_data(
-    ml.metadata, Condition("visit.number", "==", condition_value)
-)
-f_ids_site = ml.filter_by_site(SITE, ml.get_all_ids(f_ids))
-
-training_patients, validation_patients, test_patients = ms_dl.train_validation_test(
-    f_ids_site,
-    SplitRatio(training=0.7, validation=0.15, test=0.15),
-    dmo_features,
-    MILESTON,
+training_dataloader, validation_dataloader, test_dataloader = (
+    ms_dl.get_patient_dmo_dataloaders(MILESTON, SITE, dmo_features, BATCH_DIM)
 )
 
-# setup dataloaders and datasets
-transform_compose = Compose([Transform.dmo_normalise, Transform.mask_data])
-
-training_data = FatigueDMODataset(
-    training_patients, MILESTON, len(dmo_features), transform=transform_compose
-)
-
-validation_data = FatigueDMODataset(
-    validation_patients, MILESTON, len(dmo_features), transform=transform_compose
-)
-
-test_data = FatigueDMODataset(
-    test_patients, MILESTON, len(dmo_features), transform=transform_compose
-)
-
-training_dataloader = DataLoader(training_data, batch_size=BATCH_DIM)
-validation_dataloader = DataLoader(validation_data, batch_size=BATCH_DIM)
-test_dataloader = DataLoader(test_data, batch_size=BATCH_DIM)
 
 print("Setup complete, training starting now")
 
 # instantiate model, optimiser and loss function
-model = Exp1Model(INPUT_SIZE, HIDDEN_SIZE, NUM_LAYERS, OUTPUT_SIZE).to(device=device)
+model = DMOLSTM(INPUT_SIZE, HIDDEN_SIZE, NUM_LAYERS, OUTPUT_SIZE).to(device=device)
 optimiser = Adam(model.parameters(), lr=LEARNING_RATE)
 loss_fn = HuberLoss()
 
+
+best_val_score = float("inf")
 # train loop
 for epoch in range(EPOCHS):
     model.train()
@@ -86,7 +59,6 @@ for epoch in range(EPOCHS):
         # ignore patients that have no available dmo data
         if input_data.shape == (1, 1):
             continue
-
 
         input_data = input_data.to(device=device, dtype=torch.float32)
         label = label.to(device=device, dtype=torch.float32)
@@ -115,3 +87,34 @@ for epoch in range(EPOCHS):
 
     print(f"Epoch {epoch} | Train loss: {loss.item()} | Val loss: {val_loss}")
 
+    # wandb log
+    wandb.log({"loss": loss, "Accuracy": val_loss})
+
+    if val_loss < best_val_score:
+        best_val_score = val_loss
+    else:
+        print("stopping early")
+        break
+
+
+# final test
+model.eval()
+val_loss = []
+with torch.no_grad():
+    for index, (input_data, label) in enumerate(test_dataloader):
+        if input_data.shape == (1, 1):
+            continue
+
+        input_data = input_data.to(device=device, dtype=torch.float32)
+        label = label.to(device=device, dtype=torch.float32)
+
+        output = model(input_data)
+        loss = loss_fn(output, label)
+
+        val_loss.append(loss.item())
+
+loss = np.array(val_loss)
+
+print(f"final average loss: {np.mean(loss)}")
+
+wandb.finish()

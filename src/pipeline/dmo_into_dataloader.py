@@ -23,8 +23,11 @@ def dmo_into_dataloader(
         dmo_labels, training, validation, test
     )
 
+    # dmo_data_transform = Compose(
+    #     [Transform.normalise_dmo_data, Transform.mask_dmo_data]
+    # )
     dmo_data_transform = Compose(
-        [Transform.normalise_dmo_data, Transform.mask_dmo_data]
+        [Transform.normalise_dmo_data]
     )
     dmo_label_transform = Compose([Transform.normalise_dmo_label])
 

@@ -11,7 +11,7 @@ class DMOLoader(BaseLoader):
     def __init__(self, config_path: str, dmo_features: DMOFeatures, milestone: MileStone) -> None:
         super().__init__(config_path)
         self.path = self.config["paths"]["dmo_data_path"]
-        self.dmo_features = dmo_features
+        self.dmo_features = dmo_features.copy()
         self.milestone = milestone
 
     def __call__(self, ids: ListIds) -> CSVData:

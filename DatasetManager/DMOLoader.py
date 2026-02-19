@@ -11,15 +11,22 @@ import torch
 
 
 class DMOLoader(BaseLoader):
-    def __init__(self, config_path: str) -> None:
+    def __init__(
+        self, config_path: str, dmo_features: DMOFeatures, milestone: MileStone
+    ) -> None:
         super().__init__(config_path)
         self.dmo_path = self.config["paths"]["dmo_data_path"]
 
-    def get_patient_dmo_data(
-        self, id: int, features: DMOFeatures, milestone: MileStone
-    ) -> DMOTensor:
+    def __call__(self, ids):
+        return self.get_patient_dmo_data(ids)
+
+    def get_patient_dmo_data(self, id: int) -> DMOTensor:
+
+        if (self.features or self.milestone) is None:
+            return None
+
         dir_list = os.listdir(self.dmo_path)
-        milestone_dir = [x for x in dir_list if x[:2] == milestone.value][0]
+        milestone_dir = [x for x in dir_list if x[:2] == self.milestone.value][0]
 
         milestone_list = os.listdir(os.path.join(self.dmo_path, milestone_dir))
         csv_file_name = [x for x in milestone_list if "daily_agg_all" in x][0]
@@ -36,7 +43,7 @@ class DMOLoader(BaseLoader):
         if filtered_data is None:
             return torch.tensor([-1])
 
-        dmo_dataframe = self.filter_csv_column(filtered_data, features, keep_id=False)
+        dmo_dataframe = self.filter_csv_column(filtered_data, self.features, keep_id=False)
         dmo_dataframe.fillna(MASK_VALUE, inplace=True)
 
         n_rows = len(Day) - dmo_dataframe.shape[0]

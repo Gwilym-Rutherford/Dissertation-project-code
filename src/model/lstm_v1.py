@@ -22,6 +22,7 @@ class DMOLSTM(nn.Module):
 
         self.linear = nn.Linear(hidden_size, output_size)
 
+
     def forward(self, x):
 
         batch_size = x.size(0)

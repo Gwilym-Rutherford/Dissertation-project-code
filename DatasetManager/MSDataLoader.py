@@ -18,7 +18,7 @@ class MSDataLoader:
     def __init__(self, config_path) -> None:
         self.ml = MetadataLoader(config_path)
         self.sl = SensorLoader(config_path)
-        self.dl = DMOLoader(config_path)
+        #self.dl = DMOLoader(config_path)
 
     def get_metadata(self) -> CSVData:
         return self.ml.metadata

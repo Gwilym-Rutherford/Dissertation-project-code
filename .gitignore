@@ -232,3 +232,6 @@ wandb/
 
 # grapher
 log output/
+
+# DatasetManager (no longer needed)
+DatasetManager/

@@ -1,17 +1,19 @@
-from DatasetManager import MSDataLoader, MileStone, Site
+from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
+from src.core.enums import MileStone
+from src.pipeline import dmo_into_dataloader
+from src.pipeline.dmo_train import dmo_train
+from src.model import DMOLSTM
 from torch.optim import Adam
 from torch.nn import HuberLoss
-from model.lstm_v1 import DMOLSTM
-from train_logic import DataLoaderConfig, Train
 
-import numpy as np
 import torch
-import wandb
 
-# wandb initialisation
-# wandb.init(project="LSTM on DMO data")
+# for debuggin print matrix nicely with no line breaks
+torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 
-# setup constants
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# get respected data
 dmo_features = [
     "cadence_all_avg_d",
     "wbdur_all_avg_d",
@@ -20,44 +22,33 @@ dmo_features = [
     "ws_30_avg_d",
 ]
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 
-CONFIG_PATH = "config/config.yaml"
-MILESTON = MileStone.T2
-SITE = Site.MS10
+metadata = pdd.get_patient_data(PatientDataType.META)
 
-INPUT_SIZE = len(dmo_features) * 2
-HIDDEN_SIZE = 64
-NUM_LAYERS = 2
-OUTPUT_SIZE = 1
-BATCH_DIM = 1
+# print(metadata)
+all_ids = list(set(metadata["Local.Participant"].to_list()))
 
-LEARNING_RATE = 1e-4
+patient_label = pdd.get_patient_data(PatientDataType.META, ids=all_ids[:100])
 
-EPOCHS = 1000
+fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
 
-# get dmo patient dataloaders
-ms_dl = MSDataLoader(CONFIG_PATH)
+dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
+dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=all_ids[:100])
 
-training_dataloader, validation_dataloader, test_dataloader = (
-    ms_dl.get_patient_dmo_dataloaders(MILESTON, SITE, dmo_features, BATCH_DIM)
-)
+train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=1)
 
-print("Setup complete, training starting now")
+input_size = len(dmo_features)
+hidden_size = 128
+num_layers = 1
+output_size = 1
 
-train_config = DataLoaderConfig(
-    training_dataloader, validation_dataloader, test_dataloader
-)
-
-# instantiate model, optimiser and loss function
-model = DMOLSTM(INPUT_SIZE, HIDDEN_SIZE, NUM_LAYERS, OUTPUT_SIZE).to(device=device)
-optimiser = Adam(model.parameters(), lr=LEARNING_RATE)
+lr = 1e-4
 loss_fn = HuberLoss()
 
-train_obj = Train(optimiser, loss_fn, model, device)
+epochs = 20
 
-avg_loss = train_obj.train_one_epoch(train_config, lambda x: x.shape == (1, 1))
-print(avg_loss)
+model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
+optimiser = Adam(model.parameters(), lr=lr)
 
-
-# wandb.finish()
+dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test)

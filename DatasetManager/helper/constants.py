@@ -1,1 +1,0 @@
-MASK_VALUE = 0

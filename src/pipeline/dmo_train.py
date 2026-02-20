@@ -18,9 +18,8 @@ def dmo_train(
     test: DataLoader,
 ):
 
-    logger = Grapher("lstm_training")
+    logger = Grapher("lstm_training", "Baseline results")
 
-    val_loss_avg = []
 
     for epoch in range(epochs):
         train_loss = []

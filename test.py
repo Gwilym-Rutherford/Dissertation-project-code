@@ -22,9 +22,11 @@ dmo_features = [
     "ws_30_avg_d",
 ]
 
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T1)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 
 metadata = pdd.get_patient_data(PatientDataType.META)
+
+# print(metadata)
 all_ids = list(set(metadata["Local.Participant"].to_list()))
 
 patient_label = pdd.get_patient_data(PatientDataType.META, ids=all_ids[:100])
@@ -44,7 +46,7 @@ output_size = 1
 lr = 1e-4
 loss_fn = HuberLoss()
 
-epochs = 100
+epochs = 20
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)

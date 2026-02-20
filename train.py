@@ -2,6 +2,7 @@ from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone
 from src.pipeline import dmo_into_dataloader
 from src.pipeline.dmo_train import dmo_train
+from src.logger import ModelConfig
 from src.model import DMOLSTM
 from torch.optim import Adam
 from torch.nn import HuberLoss
@@ -46,9 +47,23 @@ output_size = 1
 lr = 1e-4
 loss_fn = HuberLoss()
 
-epochs = 20
+epochs = 200
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)
 
-dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test)
+config = ModelConfig(
+    name="lstm_training",
+    model_type="LSTM",
+    input_size=input_size,
+    hidden_size=hidden_size,
+    num_layers=num_layers,
+    output_size=output_size,
+    epochs=epochs,
+    optimiser=str(optimiser),
+    loss_fn=str(loss_fn),
+    learning_rate=lr,
+    notes="Not notes",
+)
+
+dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from torch.nn import Module
-from src.logger.grapher import Grapher
+from src.logger import ModelConfig, ExperimentLogger
 
 import numpy as np
 import torch
@@ -16,10 +16,10 @@ def dmo_train(
     train: DataLoader,
     validation: DataLoader,
     test: DataLoader,
+    config: ModelConfig
 ):
 
-    logger = Grapher("lstm_training", "Baseline results")
-
+    logger = ExperimentLogger(config)
 
     for epoch in range(epochs):
         train_loss = []
@@ -94,4 +94,4 @@ def dmo_train(
     accuracy = (total_correct/total_tested) * 100
 
     print(f"Accuracy: {accuracy}%")
-    logger.make_graph()
+    logger.save(accuracy)

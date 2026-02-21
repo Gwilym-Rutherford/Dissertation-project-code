@@ -37,20 +37,25 @@ class Transform:
             return dmo_data
 
         mean = real_values.mean()
-        std = real_values.std(unbiased=False)
+        std = real_values.std()
 
-        # edge case: dmo_values has only one value or all values are the same
-        if torch.isnan(std) or std < 1e-8:
-            std = torch.tensor(1.0, device=dmo_data.device, dtype=dmo_data.dtype)
+        # # # edge case: dmo_values has only one value or all values are the same
+        # # if torch.isnan(std) or std < 1e-8:
+        # #     std = torch.tensor(1.0, device=dmo_data.device, dtype=dmo_data.dtype)
         
         dmo_data = dmo_data.clone()
         dmo_data[real_values_index] = (dmo_data[real_values_index] - mean) / std
+
+        # min_value = np.min(real_values)
+        # max_value = np.max(real_values)
+
+        # dmo_data[real_values_index] = (dmo_data[real_values_index] - min_value) / (max_value - min_value)
 
         return dmo_data
         
     @staticmethod
     def normalise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
-        max_score = 21
+        max_score = 84
         return dmo_label / max_score
 
     @staticmethod

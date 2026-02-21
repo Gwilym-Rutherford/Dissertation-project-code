@@ -26,8 +26,6 @@ def dmo_train(
         train_loss = []
         validation_loss = []
         for data, label in train:
-            # if (data == 0).all() or torch.isnan(label).any():
-            #     continue
 
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
@@ -40,7 +38,7 @@ def dmo_train(
             loss = loss_fn(pred, labels)
             loss.backward()
 
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimiser.step()
 
             train_loss.append(loss.item())
@@ -50,8 +48,6 @@ def dmo_train(
         model.eval()
         with torch.no_grad():
             for data, label in validation:
-                # if (data == 0).all() or torch.isnan(label).any():
-                #     continue
 
 
                 data = data.to(device=device, dtype=torch.float32)
@@ -79,9 +75,6 @@ def dmo_train(
     model.eval()
     with torch.no_grad():
         for data, label in test:
-            if (data == 0).all() or torch.isnan(label).any():
-                continue
-
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
 

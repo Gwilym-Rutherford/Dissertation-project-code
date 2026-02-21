@@ -7,6 +7,7 @@ from src.model import DMOLSTM
 from torch.optim import Adam
 from torch.nn import HuberLoss
 
+import time
 import torch
 
 # for debuggin print matrix nicely with no line breaks
@@ -30,12 +31,12 @@ metadata = pdd.get_patient_data(PatientDataType.META)
 # print(metadata)
 all_ids = list(set(metadata["Local.Participant"].to_list()))
 
-patient_label = pdd.get_patient_data(PatientDataType.META, ids=all_ids[:100])
+patient_label = pdd.get_patient_data(PatientDataType.META, ids=all_ids)
 
 fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
 
 dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
-dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=all_ids[:100])
+dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=all_ids)
 
 train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=16)
 
@@ -47,7 +48,7 @@ output_size = 1
 lr = 1e-4
 loss_fn = HuberLoss(delta=1.0)
 
-epochs = 2000
+epochs = 200
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)

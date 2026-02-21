@@ -63,7 +63,7 @@ config = ModelConfig(
     optimiser=str(optimiser),
     loss_fn=str(loss_fn),
     learning_rate=lr,
-    notes="Not notes",
+    notes="No notes",
 )
 
 dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

@@ -36,7 +36,7 @@ fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
 dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
 dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=all_ids[:100])
 
-train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=1)
+train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=16)
 
 input_size = len(dmo_features)
 hidden_size = 128
@@ -44,9 +44,9 @@ num_layers = 1
 output_size = 1
 
 lr = 1e-4
-loss_fn = HuberLoss()
+loss_fn = HuberLoss(delta=1.0)
 
-epochs = 20
+epochs = 2000
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)

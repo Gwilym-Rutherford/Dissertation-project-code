@@ -5,7 +5,6 @@ from torchvision.transforms import Compose
 from src.dataset import DMOFatigueDataset
 from .split_data import split_data
 
-
 def dmo_into_dataloader(
     dmo_data: DMOTensor,
     dmo_labels: DMOTensor,
@@ -13,7 +12,7 @@ def dmo_into_dataloader(
     training: float = 0.7,
     validation: float = 0.15,
     test: float = 0.15,
-):
+) -> tuple[DataLoader, DataLoader, DataLoader]:
 
     train_data, validation_data, test_data = split_data(
         dmo_data, training, validation, test
@@ -26,9 +25,11 @@ def dmo_into_dataloader(
     # dmo_data_transform = Compose(
     #     [Transform.normalise_dmo_data, Transform.mask_dmo_data]
     # )
+
     dmo_data_transform = Compose(
         [Transform.normalise_dmo_data]
     )
+
     dmo_label_transform = Compose([Transform.normalise_dmo_label])
 
     dataset_training = DMOFatigueDataset(

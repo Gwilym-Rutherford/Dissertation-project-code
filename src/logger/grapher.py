@@ -42,7 +42,7 @@ class Grapher:
             plt.xlabel("Epochs")
             plt.ylabel("Loss")
 
-            plt.ylim(bottom=0, top=2)
+            plt.ylim(bottom=0)
             plt.grid()
         
         plt.figtext(0.5, 0.01, self.notes, wrap=True, horizontalalignment='center', fontsize=10)

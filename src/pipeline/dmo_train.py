@@ -22,47 +22,53 @@ def dmo_train(
     logger = ExperimentLogger(config)
 
     for epoch in range(epochs):
+        model.train()
         train_loss = []
         validation_loss = []
-
-        model.train()
         for data, label in train:
-            if (data == 0).all():
-                continue
+            # if (data == 0).all() or torch.isnan(label).any():
+            #     continue
 
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
-
-            output = model(data)
-            loss = loss_fn(output, label)
-            loss.backward()
-
-            optimiser.step()
+            
             optimiser.zero_grad()
 
-            train_loss.append(loss.cpu().item())
+            pred = model(data).view(-1)
+            labels = label.view(-1)
+            
+            loss = loss_fn(pred, labels)
+            loss.backward()
+
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimiser.step()
+
+            train_loss.append(loss.item())
         
         logger.log_values([("train_loss", np.average(train_loss))])
 
         model.eval()
         with torch.no_grad():
             for data, label in validation:
-                if (data == 0).all():
-                    continue
+                # if (data == 0).all() or torch.isnan(label).any():
+                #     continue
+
 
                 data = data.to(device=device, dtype=torch.float32)
                 label = label.to(device=device, dtype=torch.float32)
 
-                output = model(data)
-                loss = loss_fn(output, label)
 
-                validation_loss.append(loss.cpu().item())
+                pred = model(data).view(-1)
+                labels = label.view(-1)
+                loss = loss_fn(pred, labels)
+
+                validation_loss.append(loss.item())
 
         logger.log_values([("validation_loss", np.average(validation_loss))])
 
 
         print(
-            f"epoch: {epoch} \t train loss: {np.average(train_loss):.4f} \t validation loss: {np.average(validation_loss):.4f}"
+           f"epoch: {epoch + 1} \t train loss: {np.average(train_loss):.4f} \t validation loss: {np.average(validation_loss):.4f}"
         )
 
 
@@ -73,21 +79,21 @@ def dmo_train(
     model.eval()
     with torch.no_grad():
         for data, label in test:
-            if (data == 0).all():
+            if (data == 0).all() or torch.isnan(label).any():
                 continue
 
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
 
-            
-            y_hat= model(data).item()
-            y = label.item()
+            pred= model(data).view(-1)
+            labels = label.view(-1)
 
-            print(f"pred: {y_hat} actual: {y}")
+            for pred, label in zip(pred, labels):
+                print(f"pred: {pred} actual: {label}")
+                total_tested += 1
 
-            difference = abs(y_hat - y)
+            difference = abs(pred - label)
 
-            total_tested += 1    
             if difference <= tolerance:
                 total_correct += 1
 

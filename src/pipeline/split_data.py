@@ -6,7 +6,7 @@ def split_data(
     training: float = 0.7,
     validation: float = 0.15,
     test: float = 0.15,
-):
+) -> tuple[torch.Tensor]:
     if sum([training, validation, test]) != 1:
         return None
 

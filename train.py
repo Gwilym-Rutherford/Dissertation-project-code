@@ -17,14 +17,35 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # get respected data
 dmo_features = [
-    "cadence_all_avg_d",
+    "wb_all_sum_d",
+    "walkdur_all_sum_d",
+    "wbsteps_all_sum_d",
     "wbdur_all_avg_d",
-    "strdur_30_avg_d",
-    "cadence_30_avg_d",
+    "wbdur_all_p90_d",
+    "wbdur_all_var_d",
+    "cadence_all_avg_d",
+    "strdur_all_avg_d",
+    "cadence_all_var_d",
+    "strdur_all_var_d",
+    "ws_1030_avg_d",
+    "strlen_1030_avg_d",
+    "wb_10_sum_d",
+    "ws_10_p90_d",
+    "wb_30_sum_d",
     "ws_30_avg_d",
+    "strlen_30_avg_d",
+    "cadence_30_avg_d",
+    "strdur_30_avg_d",
+    "ws_30_p90_d",
+    "cadence_30_p90_d",
+    "ws_30_var_d",
+    "strlen_30_var_d",
+    "wb_60_sum_d",
+    "total_worn_h_d",
+    "total_worn_during_waking_h_d",
 ]
 
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
+pdd = PatientDataDispatcher("config/config.yaml", None, MileStone.T2)
 
 metadata = pdd.get_patient_data(PatientDataType.META)
 
@@ -38,7 +59,7 @@ fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
 dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
 dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=all_ids)
 
-train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=16)
+train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=128)
 
 input_size = len(dmo_features)
 hidden_size = 128

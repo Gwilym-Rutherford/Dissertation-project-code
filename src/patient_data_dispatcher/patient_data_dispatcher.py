@@ -15,7 +15,7 @@ class PatientDataDispatcher:
 
         self.fetcher = {
             PatientDataType.META: MetaLoader(config_path, milestone),
-            PatientDataType.DMO: DMOLoader(config_path, dmo_features, milestone),
+            PatientDataType.DMO: DMOLoader(config_path, milestone, dmo_features),
             PatientDataType.SENSOR: SensorLoader(config_path),
         }
 

@@ -30,29 +30,53 @@ class Transform:
 
     @staticmethod
     def normalise_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
-        real_values_index = dmo_data != MASK_VALUE
-        real_values = dmo_data[real_values_index]
+        n_rows, _ = dmo_data.shape
 
-        if real_values.numel() == 0:
-            return dmo_data
+        for row in range(n_rows):
+            day_tensor = dmo_data[row, :]
+            real_values_index = day_tensor != MASK_VALUE
+            real_values = day_tensor[real_values_index]
 
-        mean = real_values.mean()
-        std = real_values.std()
+            if torch.numel(real_values) == 0:
+                continue
 
-        # # # edge case: dmo_values has only one value or all values are the same
-        # # if torch.isnan(std) or std < 1e-8:
-        # #     std = torch.tensor(1.0, device=dmo_data.device, dtype=dmo_data.dtype)
-        
-        dmo_data = dmo_data.clone()
-        dmo_data[real_values_index] = (dmo_data[real_values_index] - mean) / std
+            min_value = torch.min(real_values)
+            max_value = torch.max(real_values)
+            diff = max_value - min_value
 
-        # min_value = np.min(real_values)
-        # max_value = np.max(real_values)
 
-        # dmo_data[real_values_index] = (dmo_data[real_values_index] - min_value) / (max_value - min_value)
+            if diff != 0:
+                normalised_tensor = (day_tensor[real_values_index] - min_value) / (
+                    max_value - min_value
+                )
+            else:
+                normalised_tensor = day_tensor[real_values_index] = 0
+            
+            dmo_data[row, real_values_index] = normalised_tensor
 
         return dmo_data
-        
+
+    @staticmethod
+    def center_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
+        n_rows, _ = dmo_data.shape
+
+        for row in range(n_rows):
+            day_tensor = dmo_data[row, :]
+            real_values_index = day_tensor != MASK_VALUE
+            real_values = day_tensor[real_values_index]
+
+            if torch.numel(real_values) == 0:
+                continue
+
+            mean = torch.mean(real_values)
+            std = torch.std(real_values)
+
+            normalised_tensor = (day_tensor[real_values_index] - mean) / std
+
+            dmo_data[row, real_values_index] = normalised_tensor
+
+        return dmo_data
+
     @staticmethod
     def normalise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
         max_score = 84

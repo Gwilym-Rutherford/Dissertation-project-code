@@ -61,14 +61,22 @@ dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
 train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=128)
 
+# for a, b in train:
+#     print(a)
+#     print(b)
+#     time.sleep(0.1)
+
+# quit()
+
+
 input_size = len(dmo_features)
 hidden_size = 128
 num_layers = 1
 output_size = 1
 
 lr = 1e-4
-# loss_fn = HuberLoss(delta=1.0)
-loss_fn = MSELoss()
+loss_fn = HuberLoss(delta=1.0)
+# loss_fn = MSELoss()
 
 epochs = 2000
 
@@ -86,7 +94,7 @@ config = ModelConfig(
     optimiser=str(optimiser),
     loss_fn=str(loss_fn),
     learning_rate=lr,
-    notes=f"{str(loss_fn)}\nlr: {lr}\nsamples: {len(ids)}",
+    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    samples: {len(ids)}    epochs: {epochs}",
 )
 
 dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

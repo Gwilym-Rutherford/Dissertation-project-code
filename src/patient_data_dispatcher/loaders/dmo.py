@@ -8,11 +8,15 @@ import torch
 import os
 
 class DMOLoader(BaseLoader):
-    def __init__(self, config_path: str, dmo_features: DMOFeatures, milestone: MileStone) -> None:
+    def __init__(self, config_path: str, milestone: MileStone, dmo_features: DMOFeatures = None) -> None:
         super().__init__(config_path)
         self.path = self.config["paths"]["dmo_data_path"]
-        self.dmo_features = dmo_features.copy()
         self.milestone = milestone
+
+        if dmo_features is not None:
+            self.dmo_features = dmo_features.copy()
+        else:
+            self.dmo_features = None
 
     def __call__(self, ids: ListIds) -> CSVData:
         return self.get_dmo_data(ids)
@@ -34,9 +38,17 @@ class DMOLoader(BaseLoader):
             return dmo_reader
 
         filtered_by_ids = dmo_reader[dmo_reader["participant_id"].isin(ids)]
-        self.dmo_features.append("participant_id")
-        filtered_by_features = filtered_by_ids[self.dmo_features]
+        
+        if self.dmo_features is not None:
+            self.dmo_features.append("participant_id")
+        else:
+            columns_to_remove = ["visit_type", "measurement_date"]
+            all_columns = list(filtered_by_ids.columns)
+            self.dmo_features = [column for column in all_columns if column not in columns_to_remove]
 
+
+        filtered_by_features = filtered_by_ids[self.dmo_features]
+        
         split_data_by_id = []
         for id_ in ids:
             filtered = filtered_by_features[filtered_by_features["participant_id"] == id_]

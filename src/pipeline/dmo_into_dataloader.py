@@ -5,6 +5,8 @@ from torchvision.transforms import Compose
 from src.dataset import DMOFatigueDataset
 from .split_data import split_data
 
+import time
+
 def dmo_into_dataloader(
     dmo_data: DMOTensor,
     dmo_labels: DMOTensor,

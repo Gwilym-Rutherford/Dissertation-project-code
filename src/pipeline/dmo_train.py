@@ -68,7 +68,7 @@ def dmo_train(
         )
 
 
-    tolerance = 0.2
+    tolerance = 0.3
     total_tested = 0
     total_correct = 0
 

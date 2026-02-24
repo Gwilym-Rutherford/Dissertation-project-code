@@ -1,0 +1,1 @@
+from .fatigue_dist import plot_distribution

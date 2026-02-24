@@ -49,13 +49,12 @@ class ExperimentLogger:
         n_rows = ceil(len(self.graphs.keys()) / n_cols)
         
         axes = None
-        plt.figure(figsize=(15, n_rows * 4))
+        plt.figure(figsize=(15, n_rows * 8))
         for index, key in enumerate(self.graphs):
             ax = plt.subplot(n_rows, n_cols, index + 1, sharey=axes)
 
             if axes is None:
                 axes = ax
-
 
             y_values = self.graphs[key]
             x_values = list(range(0, len(y_values)))

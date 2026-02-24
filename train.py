@@ -6,6 +6,7 @@ from src.logger import ModelConfig
 from src.model import DMOLSTM
 from torch.optim import Adam
 from torch.nn import HuberLoss, MSELoss
+from src.research_util import plot_distribution
 
 import time
 import torch
@@ -50,7 +51,7 @@ pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 metadata = pdd.get_patient_data(PatientDataType.META)
 
 # print(metadata)
-ids = list(set(metadata["Local.Participant"].to_list()))[:50]
+ids = list(set(metadata["Local.Participant"].to_list()))
 
 patient_label = pdd.get_patient_data(PatientDataType.META, ids=ids)
 
@@ -59,26 +60,18 @@ fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
 dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
 dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
-train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=128)
-
-# for a, b in train:
-#     print(a)
-#     print(b)
-#     time.sleep(0.1)
-
-# quit()
-
+train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=16, downsample_uniform=True)
 
 input_size = len(dmo_features)
 hidden_size = 128
-num_layers = 1
+num_layers = 2
 output_size = 1
 
-lr = 1e-4
-loss_fn = HuberLoss(delta=1.0)
-# loss_fn = MSELoss()
+lr = 1e-3
+# loss_fn = HuberLoss(delta=1.0)
+loss_fn = MSELoss()
 
-epochs = 2000
+epochs = 200
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)
@@ -94,7 +87,7 @@ config = ModelConfig(
     optimiser=str(optimiser),
     loss_fn=str(loss_fn),
     learning_rate=lr,
-    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    samples: {len(ids)}    epochs: {epochs}",
+    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    samples (might be reduced): {len(ids)}    epochs: {epochs}",
 )
 
 dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

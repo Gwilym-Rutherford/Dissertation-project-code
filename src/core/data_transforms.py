@@ -44,14 +44,13 @@ class Transform:
             max_value = torch.max(real_values)
             diff = max_value - min_value
 
-
             if diff != 0:
                 normalised_tensor = (day_tensor[real_values_index] - min_value) / (
                     max_value - min_value
                 )
             else:
                 normalised_tensor = day_tensor[real_values_index] = 0
-            
+
             dmo_data[row, real_values_index] = normalised_tensor
 
         return dmo_data
@@ -88,3 +87,29 @@ class Transform:
         mask_concat = torch.concatenate((dmo_data, mask_boolean), dim=1)
 
         return mask_concat
+
+    @staticmethod
+    def uniform_downsample_dmo(
+        dmo_data: torch.Tensor, dmo_labels: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+
+        bins = 20
+        threshold = 20
+
+        min_val = torch.min(dmo_labels)
+        max_val = torch.max(dmo_labels)
+        
+        bin_indices = ((dmo_labels - min_val) / (max_val - min_val) * bins).to(torch.long)
+
+        bin_counts = torch.zeros(bins, dtype=torch.int8)
+        mask = []
+
+        for i, bin_idx in enumerate(bin_indices):
+            idx = bin_idx.item() - 1
+            if bin_counts[idx] < threshold:
+                bin_counts[idx] += 1
+                mask.append(i)
+
+        mask_tensor = torch.tensor(mask, dtype=torch.long)
+        
+        return dmo_data[mask_tensor], dmo_labels[mask_tensor]

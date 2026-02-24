@@ -47,6 +47,9 @@ class ExperimentLogger:
     def _make_graph(self) -> Figure:
         n_cols = 2
         n_rows = ceil(len(self.graphs.keys()) / n_cols)
+
+        all_values = [val for sublist in self.graphs.values() for val in sublist]
+        global_max = max(all_values) if all_values else 1.0
         
         axes = None
         plt.figure(figsize=(15, n_rows * 8))
@@ -68,7 +71,7 @@ class ExperimentLogger:
             plt.xlabel("Epochs")
             plt.ylabel("Loss")
 
-            plt.ylim(bottom=0)
+            plt.ylim(0, global_max * 1.05)
             plt.grid()
 
         plt.figtext(

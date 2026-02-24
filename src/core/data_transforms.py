@@ -1,10 +1,12 @@
 from .types import DMOTensor
-from .enums import Day, MileStone
+from .enums import Day, MileStone, UniformMethod
 from pandas import DataFrame
+from math import ceil
 
 import numpy as np
 import pandas as pd
 import torch
+
 
 MASK_VALUE = 0
 
@@ -89,8 +91,8 @@ class Transform:
         return mask_concat
 
     @staticmethod
-    def uniform_downsample_dmo(
-        dmo_data: torch.Tensor, dmo_labels: torch.Tensor
+    def uniform_dmo(
+        dmo_data: torch.Tensor, dmo_labels: torch.Tensor, method: UniformMethod
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
         bins = 20
@@ -98,18 +100,29 @@ class Transform:
 
         min_val = torch.min(dmo_labels)
         max_val = torch.max(dmo_labels)
-        
-        bin_indices = ((dmo_labels - min_val) / (max_val - min_val) * bins).to(torch.long)
+
+        bin_indices = ((dmo_labels - min_val) / (max_val - min_val) * bins).to(
+            torch.long
+        )
 
         bin_counts = torch.zeros(bins, dtype=torch.int8)
         mask = []
+        bin_members = [[] for _ in range(bins)] 
 
-        for i, bin_idx in enumerate(bin_indices):
-            idx = bin_idx.item() - 1
-            if bin_counts[idx] < threshold:
-                bin_counts[idx] += 1
+        for i, bin_id in enumerate(bin_indices):
+            id_ = bin_id.item() - 1
+            if bin_counts[id_] < threshold:
+                bin_counts[id_] += 1
+                bin_members[id_].append(i) 
                 mask.append(i)
 
+        if method == UniformMethod.UPSAMPLE:
+            for bin_ in bin_members:
+                if len(bin_) < threshold:
+                    missing = threshold - len(bin_)
+                    arr_scalar = ceil(missing / len(bin_))
+                    mask.extend([x for x in (bin_ * arr_scalar)[:missing]])
+
         mask_tensor = torch.tensor(mask, dtype=torch.long)
-        
+
         return dmo_data[mask_tensor], dmo_labels[mask_tensor]

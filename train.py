@@ -1,5 +1,5 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
-from src.core.enums import MileStone
+from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
 from src.pipeline.dmo_train import dmo_train
 from src.logger import ModelConfig
@@ -60,18 +60,18 @@ fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
 dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
 dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
-train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=16, downsample_uniform=True)
+train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=16, uniform_method=UniformMethod.UPSAMPLE)
 
 input_size = len(dmo_features)
 hidden_size = 128
-num_layers = 2
+num_layers = 1
 output_size = 1
 
-lr = 1e-3
+lr = 5e-4
 # loss_fn = HuberLoss(delta=1.0)
 loss_fn = MSELoss()
 
-epochs = 200
+epochs = 400
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)

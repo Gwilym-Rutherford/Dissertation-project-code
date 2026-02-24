@@ -23,3 +23,7 @@ class Day(Enum):
     DAY6 = "Day6"
     DAY7 = "Day7"
     DAY8 = "Day8"
+
+class UniformMethod(Enum):
+    DOWNSAMPLE = 1
+    UPSAMPLE = 2

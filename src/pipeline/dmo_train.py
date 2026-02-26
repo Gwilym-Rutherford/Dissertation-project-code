@@ -16,7 +16,7 @@ def dmo_train(
     train: DataLoader,
     validation: DataLoader,
     test: DataLoader,
-    config: ModelConfig
+    config: ModelConfig,
 ):
 
     logger = ExperimentLogger(config)
@@ -26,15 +26,14 @@ def dmo_train(
         train_loss = []
         validation_loss = []
         for data, label in train:
-
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
-            
+
             optimiser.zero_grad()
 
             pred = model(data).view(-1)
             labels = label.view(-1)
-            
+
             loss = loss_fn(pred, labels)
             loss.backward()
 
@@ -42,17 +41,14 @@ def dmo_train(
             optimiser.step()
 
             train_loss.append(loss.item())
-        
+
         logger.log_values([("train_loss", np.average(train_loss))])
 
         model.eval()
         with torch.no_grad():
             for data, label in validation:
-
-
                 data = data.to(device=device, dtype=torch.float32)
                 label = label.to(device=device, dtype=torch.float32)
-
 
                 pred = model(data).view(-1)
                 labels = label.view(-1)
@@ -62,13 +58,12 @@ def dmo_train(
 
         logger.log_values([("validation_loss", np.average(validation_loss))])
 
-
         print(
-           f"epoch: {epoch + 1} \t train loss: {np.average(train_loss):.4f} \t validation loss: {np.average(validation_loss):.4f}"
+            f"epoch: {epoch + 1} \t train loss: {np.average(train_loss):.4f} \t validation loss: {np.average(validation_loss):.4f}"
         )
 
-
-    tolerance = 0.3
+    tolerance = 5
+    fatigue_scalar = 84
     total_tested = 0
     total_correct = 0
 
@@ -78,19 +73,21 @@ def dmo_train(
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
 
-            pred= model(data).view(-1)
-            labels = label.view(-1)
+            pred = model(data).view(-1) * fatigue_scalar
+            labels = label.view(-1) * fatigue_scalar
 
             for pred, label in zip(pred, labels):
+                pred = round(pred.item())
+                label = round(label.item())
                 print(f"pred: {pred} actual: {label}")
                 total_tested += 1
 
-            difference = abs(pred - label)
+                difference = abs(pred - label)
 
-            if difference <= tolerance:
-                total_correct += 1
+                if difference <= tolerance:
+                    total_correct += 1
 
-    accuracy = (total_correct/total_tested) * 100
+    accuracy = (total_correct / total_tested) * 100
 
     print(f"Accuracy: {accuracy}%")
     logger.save(accuracy)

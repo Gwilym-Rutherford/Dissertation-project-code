@@ -21,6 +21,7 @@ class DMOLSTM(nn.Module):
         )
 
         self.linear = nn.Linear(hidden_size, output_size)
+        self.relu = nn.ReLU()
 
 
     def forward(self, x):
@@ -36,5 +37,6 @@ class DMOLSTM(nn.Module):
         last_hidden = h_n[-1]
 
         out = self.linear(last_hidden)
+        out = self.relu(out)
 
         return out

@@ -13,6 +13,7 @@ class MileStone(Enum):
     T4 = "T4"
     T5 = "T5"
     DMO = "dmos"
+    ALL = "all"
 
 class Day(Enum):
     DAY1 = "Day1"

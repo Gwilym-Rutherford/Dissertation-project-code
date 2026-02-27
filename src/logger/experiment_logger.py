@@ -37,6 +37,8 @@ class ExperimentLogger:
 
         config_dict = self.config.__dict__
         config_dict["accuracy"] = f"{accuracy:.2f}%"
+        config_dict["optimiser"] = f"{str(config_dict["optimiser"])}"
+        config_dict["loss_fn"] = f"{str(config_dict["loss_fn"])}"
 
         with open(os.path.join(dir_path, "config.json"), "w") as json_file:
             json.dump(config_dict, json_file, indent=4)

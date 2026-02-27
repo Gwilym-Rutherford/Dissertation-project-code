@@ -1,13 +1,13 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
-from src.pipeline.dmo_train import dmo_train
 from src.logger import ModelConfig
 from src.model import DMOLSTM
-from torch.optim import Adam
-from torch.nn import HuberLoss, MSELoss
-from src.research_util import plot_distribution
+from src.model import lstm_regression
+from src.train import LSTMTrain
 
+import torch.nn as loss
+import torch.optim as optim
 import time
 import torch
 
@@ -48,47 +48,26 @@ dmo_features = [
 
 # get dmo data and labels
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T3)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
+# get model config
+config = lstm_regression
 
-# setup training params
-input_size = len(dmo_features)
-hidden_size = 128
-num_layers = 2
-output_size = 1
-
-lr = 5e-4
-loss_fn = HuberLoss(delta=1.0)
-# loss_fn = MSELoss()
-
-epochs = 300
-batch_size = 16
-
-# load into dataloaders
+# get dataset splits
 print("loading into dataloaders")
 train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, batch_size=batch_size, uniform_method=UniformMethod.UPSAMPLE
+    dmo_data, dmo_labels, batch_size=config.batch_size, uniform_method=None
 )
 
+# instantiate model and optimiser
+model = DMOLSTM(config).to(device=device)
+optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
 
-model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
-optimiser = Adam(model.parameters(), lr=lr)
-
-
-config = ModelConfig(
-    name="lstm_training",
-    model_type="LSTM",
-    input_size=input_size,
-    hidden_size=hidden_size,
-    num_layers=num_layers,
-    output_size=output_size,
-    epochs=epochs,
-    optimiser=str(optimiser),
-    loss_fn=str(loss_fn),
-    learning_rate=lr,
-    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    train samples: {len(train) * batch_size}    epochs: {epochs}    batch size: {batch_size}",
-)
+# instantiate train class and call train function
 print("Beginning training")
-dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)
+lstm_train = LSTMTrain(model=model, optimiser=optimiser, device=device, config=config)
+lstm_train.train(train, validation, test)
+
+# dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

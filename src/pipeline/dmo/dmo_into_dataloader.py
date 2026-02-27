@@ -52,6 +52,7 @@ def dmo_into_dataloader(
     dmo_data_transform = Compose([Transform.center_dmo_data])
 
     dmo_label_transform = Compose([Transform.normalise_dmo_label])
+    # dmo_label_transform = Compose([Transform.catagorise_dmo_label])
 
     dataset_training = DMOFatigueDataset(
         train_label,

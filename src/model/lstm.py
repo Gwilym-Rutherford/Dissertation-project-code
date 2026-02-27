@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from src.logger import ModelConfig
 
 # Notes
 # for LSTMS there are 2 outputs the short term memory and the long term memory
@@ -7,24 +8,26 @@ import torch.nn as nn
 
 
 class DMOLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, output_size):
+    def __init__(self, config: ModelConfig):
         super().__init__()
 
-        self.hidden_size = hidden_size
-        self.layer_size = num_layers
+        self.hidden_size = config.hidden_size
+        self.layer_size = config.num_layers
 
         self.lstm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
+            input_size=config.input_size,
+            hidden_size=config.hidden_size,
+            num_layers=config.num_layers,
             batch_first=True
         )
 
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.linear = nn.Linear(config.hidden_size, config.output_size)
         self.relu = nn.ReLU()
 
 
     def forward(self, x):
+
+        x = x.to(dtype=torch.float32)
 
         batch_size = x.size(0)
         device = x.device

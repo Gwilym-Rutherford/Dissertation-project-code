@@ -1,11 +1,11 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
-from src.pipeline.dmo_train import dmo_train
+from src.pipeline.dmo_train_catagory import dmo_train_catagory
 from src.logger import ModelConfig
 from src.model import DMOLSTM
 from torch.optim import Adam
-from torch.nn import HuberLoss, MSELoss
+from torch.nn import CrossEntropyLoss
 from src.research_util import plot_distribution
 
 import time
@@ -48,30 +48,32 @@ dmo_features = [
 
 # get dmo data and labels
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.ALL)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T1)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
-
-# load into dataloaders
-print("loading into dataloaders")
-train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, batch_size=16, uniform_method=UniformMethod.UPSAMPLE
-)
 
 # setup training params
 input_size = len(dmo_features)
 hidden_size = 128
 num_layers = 2
-output_size = 1
+output_size = 10
 
 lr = 5e-4
-loss_fn = HuberLoss(delta=1.0)
+loss_fn = CrossEntropyLoss()
 # loss_fn = MSELoss()
 
-epochs = 2000
+epochs = 200
+batch_size = 1
+
+# load into dataloaders
+print("loading into dataloaders")
+train, validation, test = dmo_into_dataloader(
+    dmo_data, dmo_labels, batch_size=batch_size, uniform_method=UniformMethod.UPSAMPLE
+)
 
 model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
 optimiser = Adam(model.parameters(), lr=lr)
+
 
 config = ModelConfig(
     name="lstm_training",
@@ -84,7 +86,7 @@ config = ModelConfig(
     optimiser=str(optimiser),
     loss_fn=str(loss_fn),
     learning_rate=lr,
-    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    train samples: {len(train)}    epochs: {epochs}",
+    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    train samples: {len(train) * batch_size}    epochs: {epochs}    batch size: {batch_size}",
 )
 print("Beginning training")
-dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)
+dmo_train_catagory(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

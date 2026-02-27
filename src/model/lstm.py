@@ -18,12 +18,15 @@ class DMOLSTM(nn.Module):
             input_size=config.input_size,
             hidden_size=config.hidden_size,
             num_layers=config.num_layers,
-            batch_first=True
+            batch_first=True,
         )
 
         self.linear = nn.Linear(config.hidden_size, config.output_size)
-        self.relu = nn.ReLU()
-
+        
+        # regular relu can cause loss to not change because inital state might 
+        # cause gradients to be 0 meaning no change will happen so leaky relu is 
+        # used to prevent this
+        self.relu = nn.LeakyReLU()
 
     def forward(self, x):
 

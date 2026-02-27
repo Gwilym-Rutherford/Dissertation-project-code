@@ -18,7 +18,7 @@ def dmo_into_dataloader(
     validation: float = 0.15,
     test: float = 0.15,
     uniform_method: UniformMethod = None,
-    shuffle: bool = False,
+    shuffle: bool = True,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
 
     dmo_data, dmo_labels = Transform.clean_dmo_data(dmo_data, dmo_labels)

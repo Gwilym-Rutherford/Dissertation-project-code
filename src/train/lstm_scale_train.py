@@ -9,7 +9,7 @@ from src.logger import ModelConfig, ExperimentLogger
 import numpy as np
 import torch
 
-class LSTMTrain(Train):
+class LSTMScaleTrain(Train):
     def __init__(
         self,
         model: Module,
@@ -19,9 +19,6 @@ class LSTMTrain(Train):
         log: bool = True,
     ) -> None:
         super().__init__(model, optimiser, device, config, log)
-        
-        self.config.name = "lstm_regression_testing"
-        self.logger = ExperimentLogger(self.config)
         
 
     @override

@@ -4,7 +4,7 @@ from src.pipeline import dmo_into_dataloader
 from src.logger import ModelConfig
 from src.model import DMOLSTM
 from src.model import lstm_regression
-from src.train import LSTMTrain
+from src.train import LSTMRegressionTrain
 
 import torch.nn as loss
 import torch.optim as optim
@@ -67,7 +67,7 @@ optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
 
 # instantiate train class and call train function
 print("Beginning training")
-lstm_train = LSTMTrain(model=model, optimiser=optimiser, device=device, config=config)
+lstm_train = LSTMRegressionTrain(model=model, optimiser=optimiser, device=device, config=config)
 lstm_train.train(train, validation, test)
 
 # dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)

@@ -13,6 +13,7 @@ class MileStone(Enum):
     T4 = "T4"
     T5 = "T5"
     DMO = "dmos"
+    ALL = "all"
 
 class Day(Enum):
     DAY1 = "Day1"
@@ -23,3 +24,7 @@ class Day(Enum):
     DAY6 = "Day6"
     DAY7 = "Day7"
     DAY8 = "Day8"
+
+class UniformMethod(Enum):
+    DOWNSAMPLE = 1
+    UPSAMPLE = 2

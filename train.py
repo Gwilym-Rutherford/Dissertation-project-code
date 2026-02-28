@@ -1,12 +1,16 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
-from src.core.enums import MileStone
+from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
-from src.pipeline.dmo_train import dmo_train
-from src.logger import ModelConfig
 from src.model import DMOLSTM
-from torch.optim import Adam
-from torch.nn import HuberLoss, MSELoss
+from src.model import lstm_regression, lstm_scale
+from src.train import LSTMRegressionTrain, LSTMScaleTrain
+from torchvision.transforms import Compose
+from src.core.data_transforms import Transform
 
+
+
+import torch.nn as loss
+import torch.optim as optim
 import time
 import torch
 
@@ -15,7 +19,7 @@ torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# get respected data
+# ********* get respected data *********
 dmo_features = [
     "wb_all_sum_d",
     "walkdur_all_sum_d",
@@ -45,56 +49,47 @@ dmo_features = [
     "total_worn_during_waking_h_d",
 ]
 
+# ********* get dmo data and labels *********
+print("getting data")
 pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
+ids = list(set(pdd.metadata["Local.Participant"].to_list()))
+dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
-metadata = pdd.get_patient_data(PatientDataType.META)
+# ********* get model config *********
 
-# print(metadata)
-ids = list(set(metadata["Local.Participant"].to_list()))[:50]
+# -regression
+config = lstm_regression
+# -scale
+# config = lstm_scale
 
-patient_label = pdd.get_patient_data(PatientDataType.META, ids=ids)
+# ********* setup data transforms for datasets *********
 
-fatigue_df = patient_label[["Local.Participant", "visit.number", "MFISTO1N"]]
+# method from paper (make sure to double input size in model config)
+# dmo_data_transform = Compose(
+#     [Transform.center_dmo_data, Transform.mask_dmo_data]
+# )
 
-dmo_labels = torch.tensor(fatigue_df["MFISTO1N"].tolist())
-dmo_data = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
+dmo_data_transform = Compose([Transform.center_dmo_data])
 
-train, validation, test = dmo_into_dataloader(dmo_data, dmo_labels, batch_size=128)
+# dmo_label_transform = Compose([Transform.catagorise_dmo_label])
 
-# for a, b in train:
-#     print(a)
-#     print(b)
-#     time.sleep(0.1)
+dmo_label_transform = Compose([Transform.normalise_dmo_label])
 
-# quit()
-
-
-input_size = len(dmo_features)
-hidden_size = 128
-num_layers = 1
-output_size = 1
-
-lr = 1e-4
-loss_fn = HuberLoss(delta=1.0)
-# loss_fn = MSELoss()
-
-epochs = 2000
-
-model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
-optimiser = Adam(model.parameters(), lr=lr)
-
-config = ModelConfig(
-    name="lstm_training",
-    model_type="LSTM",
-    input_size=input_size,
-    hidden_size=hidden_size,
-    num_layers=num_layers,
-    output_size=output_size,
-    epochs=epochs,
-    optimiser=str(optimiser),
-    loss_fn=str(loss_fn),
-    learning_rate=lr,
-    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    samples: {len(ids)}    epochs: {epochs}",
+# ********* get dataset splits *********
+print("loading into dataloaders")
+transforms = (dmo_data_transform, dmo_label_transform)
+train, validation, test = dmo_into_dataloader(
+    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=None
 )
 
-dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)
+# instantiate model and optimiser
+model = DMOLSTM(config).to(device=device)
+optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
+
+# instantiate train class and call train function
+print("Beginning training")
+lstm_train = LSTMRegressionTrain(
+    model=model, optimiser=optimiser, device=device, config=config
+)
+
+lstm_train.train(train, validation, test)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from torch.optim import Optimizer
 
 @dataclass
 class ModelConfig:
@@ -10,9 +11,10 @@ class ModelConfig:
     num_layers: int
     output_size: int
     epochs: int
+    batch_size: int
 
-    optimiser: str
-    loss_fn: str
+    optimiser: Optimizer
+    loss_fn: callable
     learning_rate: float
     
     notes: str = "No notes"

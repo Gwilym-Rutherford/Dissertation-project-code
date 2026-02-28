@@ -1,10 +1,12 @@
 from .types import DMOTensor
-from .enums import Day, MileStone
+from .enums import Day, UniformMethod
 from pandas import DataFrame
+from math import ceil
 
 import numpy as np
 import pandas as pd
 import torch
+
 
 MASK_VALUE = 0
 
@@ -13,7 +15,8 @@ class Transform:
     @staticmethod
     def fix_missing_dmo_data(dmo_data: DataFrame) -> DataFrame:
         dmo_data.fillna(MASK_VALUE, inplace=True)
-        expected_shape = (len(Day), len(MileStone) - 1)
+        number_of_milestones = 5
+        expected_shape = (len(Day), number_of_milestones)
 
         if dmo_data.shape == expected_shape:
             return dmo_data
@@ -44,14 +47,13 @@ class Transform:
             max_value = torch.max(real_values)
             diff = max_value - min_value
 
-
             if diff != 0:
                 normalised_tensor = (day_tensor[real_values_index] - min_value) / (
                     max_value - min_value
                 )
             else:
                 normalised_tensor = day_tensor[real_values_index] = 0
-            
+
             dmo_data[row, real_values_index] = normalised_tensor
 
         return dmo_data
@@ -83,8 +85,70 @@ class Transform:
         return dmo_label / max_score
 
     @staticmethod
+    def catagorise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
+        max_theoretical_value = 21 * 5
+        n_catagories = 5
+
+        catagory_width = max_theoretical_value / n_catagories
+        catagories = (dmo_label/catagory_width).floor().long()
+        return catagories
+
+    @staticmethod
+    def clean_dmo_data(
+    dmo_data: DMOTensor, labels: DMOTensor
+    ) -> tuple[DMOTensor, DMOTensor]:
+        mask = []
+        for i in range(len(dmo_data)):
+            if not torch.isnan(labels[i]) and dmo_data[i].sum().item() > 0:
+                mask.append(i)
+
+        labels = labels[mask]
+        dmo_data = dmo_data[mask]
+
+        return dmo_data, labels
+
+
+    @staticmethod
     def mask_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
         mask_boolean = (dmo_data != MASK_VALUE).to(torch.float32)
         mask_concat = torch.concatenate((dmo_data, mask_boolean), dim=1)
 
         return mask_concat
+
+    @staticmethod
+    def uniform_dmo(
+        dmo_data: torch.Tensor, dmo_labels: torch.Tensor, method: UniformMethod
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+
+        # These are somehwat arbitrary
+        bins = 20
+        threshold = 100
+
+        min_val = torch.min(dmo_labels)
+        max_val = torch.max(dmo_labels)
+
+        bin_indices = ((dmo_labels - min_val) / (max_val - min_val + 1e-8) * bins).to(
+            dtype=torch.int8
+        )
+
+        bin_counts = torch.zeros(bins, dtype=torch.int8)
+        mask = []
+        bin_members = [[] for _ in range(bins)] 
+
+        for i, bin_id in enumerate(bin_indices):
+            id_ = bin_id.item() - 1
+            if bin_counts[id_] < threshold:
+                bin_counts[id_] += 1
+                bin_members[id_].append(i) 
+                mask.append(i)
+
+        if method == UniformMethod.UPSAMPLE:
+            for bin_ in bin_members:
+                if len(bin_) < threshold and len(bin_) != 0:
+                    missing = threshold - len(bin_)
+                    arr_scalar = ceil(missing / len(bin_))
+                    mask.extend([x for x in (bin_ * arr_scalar)[:missing]])
+
+        mask_tensor = torch.tensor(mask, dtype=torch.long)
+
+        return dmo_data[mask_tensor], dmo_labels[mask_tensor]

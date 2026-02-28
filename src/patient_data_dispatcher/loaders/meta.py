@@ -15,7 +15,9 @@ class MetaLoader(BaseLoader):
     def get_metadata(self, ids: ListIds) -> CSVData:
         reader = pd.read_csv(self.path, chunksize=100000, low_memory=False)
         metadata = pd.concat(reader, ignore_index=True)
-        metadata = metadata[metadata["visit.number"] == self.milestone.value.lower()]
+
+        if self.milestone != MileStone.ALL:
+            metadata = metadata[metadata["visit.number"] == self.milestone.value.lower()]
 
         if ids is None:
             return metadata

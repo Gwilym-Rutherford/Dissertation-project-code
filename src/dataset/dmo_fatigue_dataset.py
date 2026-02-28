@@ -12,19 +12,10 @@ class DMOFatigueDataset(Dataset):
         transform=None,
         target_transform=None,
     ) -> None:
-        #self.labels = labels
-        #self.dmo_data = dmo_data
+        self.labels = labels
+        self.dmo_data = dmo_data
         self.transform = transform
         self.target_transform = target_transform
-
-        mask = []
-        for i in range(len(dmo_data)):
-            if not torch.isnan(labels[i]) and dmo_data[i].sum().item() > 0:
-                mask.append(i)
-
-        self.labels = labels[mask]
-        self.dmo_data = dmo_data[mask]
-
 
     def __len__(self):
         return len(self.labels)

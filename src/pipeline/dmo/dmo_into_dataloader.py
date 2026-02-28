@@ -14,6 +14,7 @@ def dmo_into_dataloader(
     dmo_data: DMOTensor,
     dmo_labels: DMOTensor,
     batch_size: int,
+    transforms: tuple[Compose, Compose],
     training: float = 0.7,
     validation: float = 0.15,
     test: float = 0.15,
@@ -44,15 +45,7 @@ def dmo_into_dataloader(
         # )
         # quit()
 
-    # testing method from paper
-    # dmo_data_transform = Compose(
-    #     [Transform.center_dmo_data, Transform.mask_dmo_data]
-    # )
-
-    dmo_data_transform = Compose([Transform.center_dmo_data])
-
-    dmo_label_transform = Compose([Transform.normalise_dmo_label])
-    # dmo_label_transform = Compose([Transform.catagorise_dmo_label])
+    dmo_data_transform, dmo_label_transform = transforms
 
     dataset_training = DMOFatigueDataset(
         train_label,

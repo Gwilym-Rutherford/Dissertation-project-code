@@ -1,10 +1,13 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
-from src.logger import ModelConfig
 from src.model import DMOLSTM
-from src.model import lstm_regression
-from src.train import LSTMRegressionTrain
+from src.model import lstm_regression, lstm_scale
+from src.train import LSTMRegressionTrain, LSTMScaleTrain
+from torchvision.transforms import Compose
+from src.core.data_transforms import Transform
+
+
 
 import torch.nn as loss
 import torch.optim as optim
@@ -16,7 +19,7 @@ torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# get respected data
+# ********* get respected data *********
 dmo_features = [
     "wb_all_sum_d",
     "walkdur_all_sum_d",
@@ -46,19 +49,37 @@ dmo_features = [
     "total_worn_during_waking_h_d",
 ]
 
-# get dmo data and labels
+# ********* get dmo data and labels *********
 print("getting data")
 pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
-# get model config
-config = lstm_regression
+# ********* get model config *********
 
-# get dataset splits
+# -regression
+config = lstm_regression
+# -scale
+# config = lstm_scale
+
+# ********* setup data transforms for datasets *********
+
+# method from paper (make sure to double input size in model config)
+# dmo_data_transform = Compose(
+#     [Transform.center_dmo_data, Transform.mask_dmo_data]
+# )
+
+dmo_data_transform = Compose([Transform.center_dmo_data])
+
+# dmo_label_transform = Compose([Transform.catagorise_dmo_label])
+
+dmo_label_transform = Compose([Transform.normalise_dmo_label])
+
+# ********* get dataset splits *********
 print("loading into dataloaders")
+transforms = (dmo_data_transform, dmo_label_transform)
 train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, batch_size=config.batch_size, uniform_method=None
+    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=None
 )
 
 # instantiate model and optimiser
@@ -67,7 +88,8 @@ optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
 
 # instantiate train class and call train function
 print("Beginning training")
-lstm_train = LSTMRegressionTrain(model=model, optimiser=optimiser, device=device, config=config)
-lstm_train.train(train, validation, test)
+lstm_train = LSTMRegressionTrain(
+    model=model, optimiser=optimiser, device=device, config=config
+)
 
-# dmo_train(model, optimiser, loss_fn, epochs, device, train, validation, test, config)
+lstm_train.train(train, validation, test)

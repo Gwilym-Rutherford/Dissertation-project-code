@@ -87,7 +87,7 @@ class Transform:
     @staticmethod
     def catagorise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
         max_theoretical_value = 21 * 5
-        n_catagories = 10
+        n_catagories = 5
 
         catagory_width = max_theoretical_value / n_catagories
         catagories = (dmo_label/catagory_width).floor().long()

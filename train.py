@@ -7,11 +7,6 @@ from src.train import LSTMRegressionTrain, LSTMScaleTrain
 from torchvision.transforms import Compose
 from src.core.data_transforms import Transform
 
-
-
-import torch.nn as loss
-import torch.optim as optim
-import time
 import torch
 
 # for debuggin print matrix nicely with no line breaks
@@ -71,7 +66,7 @@ config = lstm_regression
 
 dmo_data_transform = Compose([Transform.center_dmo_data])
 
-# dmo_label_transform = Compose([Transform.catagorise_dmo_label])
+#dmo_label_transform = Compose([Transform.catagorise_dmo_label])
 
 dmo_label_transform = Compose([Transform.normalise_dmo_label])
 

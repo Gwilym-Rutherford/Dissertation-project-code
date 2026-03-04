@@ -1,8 +1,8 @@
 from math import ceil
 from datetime import datetime
-from .model_config import ModelConfig
+from src.model.model_config_class import ModelConfig
 from matplotlib.figure import Figure
-from src.research_util import compute_all_metrics, confusion_matrix
+from src.evaluation import Evaluation
 
 import matplotlib.pyplot as plt
 import os
@@ -26,7 +26,7 @@ class ExperimentLogger:
                 self.graphs[key] = []
             self.graphs[key].append(value)
 
-    def save(self, pred: torch.tensor, labels: torch.tensor, show_fig: bool = True):
+    def save(self, evaluation: Evaluation, show_fig: bool = True):
         now = datetime.now()
         timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -37,12 +37,12 @@ class ExperimentLogger:
             )
 
         plt = self._make_graph()
-        plt.savefig(os.path.join(dir_path, "plot"))
+        plt.savefig(os.path.join(dir_path, "training_plot"))
 
-        confusion_plt = confusion_matrix(pred, labels)
-        confusion_plt.savefig(os.path.join(dir_path, "confusion"))
+        confusion_plt = evaluation.evaluation_plot()
+        confusion_plt.savefig(os.path.join(dir_path, "evaluation_plot"))
 
-        metrics = compute_all_metrics(pred, labels)
+        metrics = evaluation.compute_all_metrics()
 
         config_dict = self.config.__dict__
         config_dict.update(metrics)

@@ -1,20 +1,16 @@
-from .train_base import Train
-
-from typing import override
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from torch.nn import Module
-from src.logger.experiment_logger import ModelConfig
+from src.model.model_config_class import ModelConfig
+from src.logger import ExperimentLogger
 from contextlib import nullcontext
-from src.evaluation import LSTMScaleEvaluation
-from src.core.data_transforms import Transform
-
+from src.evaluation import Evaluation
 
 import numpy as np
 import torch
 
 
-class LSTMScaleTrain(Train):
+class Train:
     def __init__(
         self,
         model: Module,
@@ -22,10 +18,34 @@ class LSTMScaleTrain(Train):
         device: torch.device,
         config: ModelConfig,
         log: bool = True,
-    ) -> None:
-        super().__init__(model, optimiser, device, config, log)
+        verbose: bool = True,
+    ):
+        self.model = model
+        self.optimiser = optimiser
+        self.loss_fn = config.loss_fn
+        self.device = device
+        self.config = config
+        self.epochs = config.epochs
+        self.log = log
+        self.verbose = verbose
 
-    @override
+        self.logger = ExperimentLogger(config)
+
+    def train(
+        self, train: DataLoader, validation: DataLoader, test: DataLoader
+    ) -> None:
+        for epoch in range(self.epochs):
+            avg_train_loss = self.run_one_epoch(train, training=True)
+            avg_validation_loss = self.run_one_epoch(validation, training=False)
+
+            if self.verbose:
+                print(
+                    f"epoch: {epoch + 1} \t train loss: {avg_train_loss:.4f} \t"
+                    + f"validation loss: {avg_validation_loss:.4f}"
+                )
+
+        self.test_and_evaluate_one_epoch(test)
+
     def run_one_epoch(self, dataset: DataLoader, training: bool) -> float:
         self.model.train() if training else self.model.eval()
         context = nullcontext() if training else torch.no_grad()
@@ -34,7 +54,7 @@ class LSTMScaleTrain(Train):
         with context:
             for data, label in dataset:
                 data = data.to(device=self.device, dtype=torch.float32)
-                label = label.to(device=self.device, dtype=torch.long)
+                label = label.to(device=self.device, dtype=torch.float32)
 
                 loss_val = self.run_one_step(data, label, training=training)
                 loss.append(loss_val.item())
@@ -44,12 +64,11 @@ class LSTMScaleTrain(Train):
         self.logger.log_values([(graph, avg_loss)])
         return avg_loss
 
-    @override
     def run_one_step(
         self, data: torch.tensor, label: torch.tensor, training: bool
     ) -> float:
         self.optimiser.zero_grad()
-        pred = self.model(data)
+        pred = self.model(data).view(-1)
         labels = label.view(-1)
 
         loss = self.loss_fn(pred, labels)
@@ -61,7 +80,6 @@ class LSTMScaleTrain(Train):
 
         return loss
 
-    @override
     def test_and_evaluate_one_epoch(self, test: DataLoader) -> None:
         pred_list = []
         labels_list = []
@@ -70,18 +88,19 @@ class LSTMScaleTrain(Train):
         with torch.no_grad():
             for data, label in test:
                 data = data.to(device=self.device, dtype=torch.float32)
-                label = label.to(device=self.device, dtype=torch.long)
+                label = label.to(device=self.device, dtype=torch.float32)
 
-                pred_list.append(self.model(data).long())
-                labels_list.append(label.view(-1))
+                prediction = self.model(data).view(-1)
+                pred_list.append(prediction)
 
+                print(label)
+                labels = label.view(-1)
+                labels_list.append(labels)
 
         pred = torch.cat(pred_list).cpu()
         labels = torch.cat(labels_list).cpu()
 
-        pred = Transform.scale_output_to_single_value(pred)
-
-        evaluation = LSTMScaleEvaluation(pred, labels)
-
+        evaluation = Evaluation(pred, labels)
+        
         if self.log:
             self.logger.save(evaluation, show_fig=self.verbose)

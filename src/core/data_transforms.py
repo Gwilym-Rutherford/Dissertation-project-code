@@ -87,7 +87,8 @@ class Transform:
     @staticmethod
     def catagorise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
         max_theoretical_value = 21 * 5
-        n_catagories = 5
+        # if changing this make sure to change the output size for lstm_scale
+        n_catagories = 10
 
         catagory_width = max_theoretical_value / n_catagories
         catagories = (dmo_label/catagory_width).floor().long()
@@ -152,3 +153,9 @@ class Transform:
         mask_tensor = torch.tensor(mask, dtype=torch.long)
 
         return dmo_data[mask_tensor], dmo_labels[mask_tensor]
+
+    @staticmethod
+    def scale_output_to_single_value(scale_output: torch.Tensor) -> torch.Tensor:
+        values, indices = torch.max(scale_output, dim=1)
+        return values
+

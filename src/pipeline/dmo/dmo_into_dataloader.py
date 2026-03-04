@@ -68,8 +68,8 @@ def dmo_into_dataloader(
         target_transform=dmo_label_transform,
     )
 
-    dataloader_training = DataLoader(dataset_training, batch_size=batch_size, shuffle=False)
-    dataloader_validation = DataLoader(dataset_validation, batch_size=batch_size, shuffle=False)
-    dataloader_testing = DataLoader(dataset_testing, batch_size=batch_size, shuffle=False)
+    dataloader_training = DataLoader(dataset_training, batch_size=batch_size, shuffle=True)
+    dataloader_validation = DataLoader(dataset_validation, batch_size=batch_size, shuffle=True)
+    dataloader_testing = DataLoader(dataset_testing, batch_size=batch_size, shuffle=True)
 
     return (dataloader_training, dataloader_testing, dataloader_validation)

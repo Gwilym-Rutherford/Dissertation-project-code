@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from src.logger import ModelConfig
+from src.model.model_config_class import ModelConfig
 
 # Notes
 # for LSTMS there are 2 outputs the short term memory and the long term memory

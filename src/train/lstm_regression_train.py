@@ -1,10 +1,11 @@
-from .train import Train
+from .train_base import Train
 
 from typing import override
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from torch.nn import Module
-from src.logger import ModelConfig, ExperimentLogger
+from src.model.model_config_class import ModelConfig
+from src.evaluation import Evaluation
 
 import numpy as np
 import torch
@@ -21,9 +22,6 @@ class LSTMRegressionTrain(Train):
         verbose: bool = True,
     ) -> None:
         super().__init__(model, optimiser, device, config, log, verbose)
-
-        self.config.name = "lstm_regression_testing"
-        self.logger = ExperimentLogger(self.config)
 
     @override
     def test_one_epoch(self, test: DataLoader) -> None:
@@ -53,27 +51,25 @@ class LSTMRegressionTrain(Train):
         if self.log:
             self.logger.save(pred, labels, show_fig=self.verbose)
 
-    # @override
-    # def test_evaluation_logic(
-    #     self, pred: torch.tensor, labels: torch.tensor
-    # ) -> tuple[int, int]:
-    #     threshold = 5
-    #     fatigue_scalar = 84
-    #     total_tested = 0
-    #     total_correct = 0
+    @override
+    def test_and_evaluate_one_epoch(self, test: DataLoader) -> None:
+        pred_list = []
+        labels_list = []
 
-    #     pred = pred * fatigue_scalar
-    #     labels = labels * fatigue_scalar
+        self.model.eval()
+        with torch.no_grad():
+            for data, label in test:
+                data = data.to(device=self.device, dtype=torch.float32)
+                label = label.to(device=self.device, dtype=torch.float32)
 
-    #     for pred, label in zip(pred, labels):
-    #         pred = round(pred.item())
-    #         label = round(label.item())
-    #         print(f"pred: {pred} actual: {label}")
-    #         total_tested += 1
+                pred_list.append(self.model(data))
 
-    #         difference = abs(pred - label)
+                labels_list.append(label.view(-1))
 
-    #         if difference <= threshold:
-    #             total_correct += 1
+        pred = torch.cat(pred_list).cpu()
+        labels = torch.cat(labels_list).cpu()
+    
+        evaluation = Evaluation(pred, labels)
 
-    #     return total_tested, total_correct
+        if self.log:
+            self.logger.save(evaluation, show_fig=self.verbose)

@@ -1,14 +1,12 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
-from src.pipeline.dmo_train_catagory import dmo_train_catagory
-from src.logger import ModelConfig
 from src.model import DMOLSTM
-from torch.optim import Adam
-from torch.nn import CrossEntropyLoss
-from src.research_util import plot_distribution
+from src.model import lstm_regression, lstm_scale
+from src.train import LSTMRegressionTrain, LSTMScaleTrain
+from torchvision.transforms import Compose
+from src.core.data_transforms import Transform
 
-import time
 import torch
 
 # for debuggin print matrix nicely with no line breaks
@@ -16,7 +14,6 @@ torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# get respected data
 dmo_features = [
     "wb_all_sum_d",
     "walkdur_all_sum_d",
@@ -46,47 +43,28 @@ dmo_features = [
     "total_worn_during_waking_h_d",
 ]
 
-# get dmo data and labels
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T1)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
-# setup training params
-input_size = len(dmo_features)
-hidden_size = 128
-num_layers = 2
-output_size = 10
+config = lstm_scale
 
-lr = 5e-4
-loss_fn = CrossEntropyLoss()
-# loss_fn = MSELoss()
+dmo_data_transform = Compose([Transform.center_dmo_data])
+dmo_label_transform = Compose([Transform.catagorise_dmo_label])
 
-epochs = 200
-batch_size = 1
-
-# load into dataloaders
 print("loading into dataloaders")
+transforms = (dmo_data_transform, dmo_label_transform)
 train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, batch_size=batch_size, uniform_method=UniformMethod.UPSAMPLE
+    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=None
 )
 
-model = DMOLSTM(input_size, hidden_size, num_layers, output_size).to(device=device)
-optimiser = Adam(model.parameters(), lr=lr)
+model = DMOLSTM(config).to(device=device)
+optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
 
-
-config = ModelConfig(
-    name="lstm_training",
-    model_type="LSTM",
-    input_size=input_size,
-    hidden_size=hidden_size,
-    num_layers=num_layers,
-    output_size=output_size,
-    epochs=epochs,
-    optimiser=str(optimiser),
-    loss_fn=str(loss_fn),
-    learning_rate=lr,
-    notes=f"loss_fn: {str(loss_fn)}    lr: {lr}    train samples: {len(train) * batch_size}    epochs: {epochs}    batch size: {batch_size}",
-)
 print("Beginning training")
-dmo_train_catagory(model, optimiser, loss_fn, epochs, device, train, validation, test, config)
+lstm_train = LSTMScaleTrain(
+    model=model, optimiser=optimiser, device=device, config=config
+)
+
+lstm_train.train(train, validation, test)

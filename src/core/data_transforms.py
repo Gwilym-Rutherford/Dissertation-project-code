@@ -121,7 +121,7 @@ class Transform:
         dmo_data: torch.Tensor, dmo_labels: torch.Tensor, method: UniformMethod
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
-        # These are somehwat arbitrary
+        # These are somehwat arbitrary, and can be tweaked
         bins = 20
         threshold = 100
 
@@ -158,4 +158,11 @@ class Transform:
     def scale_output_to_single_value(scale_output: torch.Tensor) -> torch.Tensor:
         values, indices = torch.max(scale_output, dim=1)
         return values
+
+    @staticmethod
+    def downsample_sensor_data(sensor_data: torch.Tensor) -> torch.Tensor:
+        # a somewhat arbitrary number as a starting point
+        samples = 1000
+
+        
 

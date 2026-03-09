@@ -1,5 +1,5 @@
 from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
-from src.core.enums import MileStone
+from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
 from src.model import DMOLSTM
 from src.model import lstm_regression
@@ -44,13 +44,14 @@ dmo_features = [
 ]
 
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.ALL)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
 config = lstm_regression
+config.notes = "Regression with downsampling"
 
-dmo_data_transform = Compose([Transform.center_dmo_data])
+dmo_data_transform = Compose([Transform.center_dmo_data, Transform.mask_dmo_data])
 dmo_label_transform = Compose([Transform.normalise_dmo_label])
 
 print("loading into dataloaders")

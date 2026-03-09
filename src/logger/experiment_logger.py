@@ -42,6 +42,9 @@ class ExperimentLogger:
         confusion_plt = evaluation.evaluation_plot()
         confusion_plt.savefig(os.path.join(dir_path, "evaluation_plot"))
 
+        bland_altman_plt = evaluation.bland_altman_plot()
+        bland_altman_plt.savefig(os.path.join(dir_path, "bland_altman_plot"))
+
         metrics = evaluation.compute_all_metrics()
 
         config_dict = self.config.__dict__

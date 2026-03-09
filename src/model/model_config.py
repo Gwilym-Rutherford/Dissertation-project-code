@@ -6,7 +6,7 @@ from torch.optim import Adam
 lstm_regression = ModelConfig(
     name="lstm_regression",
     model_type="LSTM",
-    input_size=26,
+    input_size=26*2,
     hidden_size=128,
     num_layers=2,
     output_size=1,
@@ -25,7 +25,7 @@ lstm_scale = ModelConfig(
     num_layers=1,
     output_size=10,
     batch_size=16,
-    epochs=100,
+    epochs=300,
     optimiser=Adam,
     loss_fn=CrossEntropyLoss(),
     learning_rate=5e-4,

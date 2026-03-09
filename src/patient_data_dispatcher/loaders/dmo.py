@@ -37,10 +37,10 @@ class DMOLoader(BaseLoader):
         else:
             self.dmo_features = None
 
-    def __call__(self, ids: ListIds) -> CSVData:
+    def __call__(self, ids: ListIds) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
         return self.get_dmo_data(ids)
 
-    def get_dmo_data(self, ids: ListIds) -> CSVData:
+    def get_dmo_data(self, ids: ListIds) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
 
         dir_list = os.listdir(self.path)
 
@@ -112,9 +112,8 @@ class DMOLoader(BaseLoader):
 
                 if pd.isna(dmo_label):
                     continue
-                
+
                 dmo_data.append(dmo_data_tensor)
                 dmo_labels.append(dmo_label)
 
-       
         return torch.stack(dmo_data), torch.tensor(dmo_labels)

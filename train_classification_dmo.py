@@ -2,8 +2,8 @@ from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_into_dataloader
 from src.model import DMOLSTM
-from src.model import lstm_regression, lstm_scale
-from src.train import LSTMRegressionTrain, LSTMScaleTrain
+from src.model import lstm_scale
+from src.train import LSTMScaleTrain
 from torchvision.transforms import Compose
 from src.core.data_transforms import Transform
 
@@ -49,6 +49,7 @@ ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
 config = lstm_scale
+config.notes = "Classification with Upsampling"
 
 dmo_data_transform = Compose([Transform.center_dmo_data])
 dmo_label_transform = Compose([Transform.catagorise_dmo_label])
@@ -56,7 +57,7 @@ dmo_label_transform = Compose([Transform.catagorise_dmo_label])
 print("loading into dataloaders")
 transforms = (dmo_data_transform, dmo_label_transform)
 train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=None
+    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=UniformMethod.DOWNSAMPLE
 )
 
 model = DMOLSTM(config).to(device=device)

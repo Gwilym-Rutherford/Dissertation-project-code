@@ -44,7 +44,7 @@ dmo_features = [
 ]
 
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.ALL)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 

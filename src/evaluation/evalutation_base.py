@@ -93,3 +93,32 @@ class Evaluation(ABC):
         ax.set_ylabel("Difference (prediction - label)")
         ax.set_title("Bland-Altman plot for prediction and ground truth")
         return plt
+
+    def residual_plot(self) -> plt:
+        fig, ax = plt.subplots(figsize=(8, 8))
+        preds = self.preds
+        labels = self.labels
+
+        mean_val_x = preds
+        diff_val_y = preds - labels
+        ax.scatter(mean_val_x, diff_val_y)
+
+        mean_diff = torch.mean(diff_val_y)
+        std_diff = torch.std(diff_val_y)
+
+        upper_limit = mean_diff + (1.96 * std_diff)
+        lower_limit = mean_diff - (1.96 * std_diff)
+
+        l_upper = ax.axhline(upper_limit, c="red", ls="dashed")
+        l_lower = ax.axhline(lower_limit, c="red", ls="dashed")
+        l_mean = ax.axhline(mean_diff, c="blue")
+        l_center = ax.axhline(0, c="green")
+        ax.legend(
+            (l_upper, l_lower, l_mean, l_center),
+            ("Upper limit", "Lower limit", "Mean", "Center"),
+            loc="upper right",
+        )
+        ax.set_xlabel("Mean")
+        ax.set_ylabel("Difference (prediction - label)")
+        ax.set_title("Bland-Altman plot for prediction and ground truth")
+        return plt

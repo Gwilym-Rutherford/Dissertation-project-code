@@ -110,9 +110,10 @@ class Transform:
 
 
     @staticmethod
-    def mask_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
+    # should be dim = 1 for regular training, but 2 for random forest
+    def mask_dmo_data(dmo_data: DMOTensor, dim: int = 1) -> DMOTensor:
         mask_boolean = (dmo_data != MASK_VALUE).to(torch.float32)
-        mask_concat = torch.concatenate((dmo_data, mask_boolean), dim=1)
+        mask_concat = torch.concatenate((dmo_data, mask_boolean), dim=2)
 
         return mask_concat
 
@@ -160,9 +161,23 @@ class Transform:
         return values
 
     @staticmethod
-    def downsample_sensor_data(sensor_data: torch.Tensor) -> torch.Tensor:
-        # a somewhat arbitrary number as a starting point
-        samples = 1000
+    def average_non_missing(data: torch.Tensor) -> torch.Tensor:
+        mask = (data != MASK_VALUE).to(torch.long)
+
+        clean_data = data * mask
+        sum_vals = torch.sum(clean_data, dim=1)
+        counts = torch.sum(mask, dim=1)
+        counts = torch.clamp(counts, min=1)
+        return sum_vals / counts
+
+
+    # @staticmethod
+    # def downsample_sensor_data(sensor_data: torch.Tensor) -> torch.Tensor:
+    #     # a somewhat arbitrary number as a starting point
+    #     samples = 1000
+
+
+
 
         
 

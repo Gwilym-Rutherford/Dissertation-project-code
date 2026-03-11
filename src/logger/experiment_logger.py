@@ -45,6 +45,9 @@ class ExperimentLogger:
         bland_altman_plt = evaluation.bland_altman_plot()
         bland_altman_plt.savefig(os.path.join(dir_path, "bland_altman_plot"))
 
+        residual_plt = evaluation.residual_plot()
+        residual_plt.savefig(os.path.join(dir_path, "residual_plot"))
+
         metrics = evaluation.compute_all_metrics()
 
         config_dict = self.config.__dict__

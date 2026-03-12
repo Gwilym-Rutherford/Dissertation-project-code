@@ -1,7 +1,11 @@
 from .types import DMOTensor
+from typing import Literal
 from .enums import Day, UniformMethod
 from pandas import DataFrame
 from math import ceil
+
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
 
 import numpy as np
 import pandas as pd
@@ -78,6 +82,25 @@ class Transform:
             dmo_data[row, real_values_index] = normalised_tensor
 
         return dmo_data
+
+    @classmethod
+    def fit_impute_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
+        if len(dmo_data.shape) == 3:
+            samples, days, features = dmo_data.shape
+            dmo_data = dmo_data.view(samples * days, features)
+
+        print(dmo_data.shape)
+
+        cls.impute = IterativeImputer(random_state=0, missing_values=MASK_VALUE)
+        cls.impute.fit(dmo_data)
+
+    @classmethod
+    def imput_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
+        if len(dmo_data.shape) == 3:
+            samples, days, features = dmo_data.shape
+            dmo_data = dmo_data.view(samples * days, features)
+        
+        return torch.tensor(cls.impute.transform(dmo_data))
 
     @staticmethod
     def normalise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:

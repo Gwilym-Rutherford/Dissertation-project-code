@@ -13,6 +13,7 @@ import torch
 torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 dmo_features = [
     "wb_all_sum_d",
@@ -51,13 +52,13 @@ dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 config = lstm_regression
 config.notes = "Regression with downsampling"
 
-dmo_data_transform = Compose([Transform.center_dmo_data, Transform.mask_dmo_data])
+dmo_data_transform = Compose([Transform.imput_dmo_data, Transform.center_dmo_data])
 dmo_label_transform = Compose([Transform.normalise_dmo_label])
 
 print("loading into dataloaders")
 transforms = (dmo_data_transform, dmo_label_transform)
 train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=None
+    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=UniformMethod.UPSAMPLE
 )
 
 model = DMOLSTM(config).to(device=device)

@@ -51,7 +51,7 @@ dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 config = lstm_scale
 config.notes = "Classification with Upsampling"
 
-dmo_data_transform = Compose([Transform.center_dmo_data])
+dmo_data_transform = Compose([Transform.imput_dmo_data, Transform.center_dmo_data])
 dmo_label_transform = Compose([Transform.catagorise_dmo_label])
 
 print("loading into dataloaders")

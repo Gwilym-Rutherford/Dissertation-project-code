@@ -7,6 +7,7 @@ from ..split_data import split_data
 from src.research_util import plot_distribution
 from src.core.enums import UniformMethod
 
+import numpy as np
 import torch
 
 
@@ -23,6 +24,8 @@ def dmo_into_dataloader(
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
 
     dmo_data, dmo_labels = Transform.clean_dmo_data(dmo_data, dmo_labels)
+
+    Transform.fit_impute_dmo_data(dmo_data)
 
     if shuffle:
         perm_mask = torch.randperm(dmo_data.shape[0])

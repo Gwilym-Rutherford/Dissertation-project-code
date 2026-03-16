@@ -100,7 +100,7 @@ class Evaluation(ABC):
         preds = self.preds
         labels = self.labels
 
-        pred_val_x = preds
+        pred_val_x = labels
         diff_val_y = preds - labels
         ax.scatter(pred_val_x, diff_val_y)
 

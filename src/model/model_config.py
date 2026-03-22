@@ -34,13 +34,13 @@ lstm_scale = ModelConfig(
 sanity = ModelConfig(
     name="sanity_check",
     model_type="LSTM",
-    input_size=7,
+    input_size=5,
     hidden_size=64,
     num_layers=1,
-    output_size=7,
+    output_size=1,
     batch_size=1,
-    epochs=10,
+    epochs=100,
     optimiser=Adam,
     loss_fn=MSELoss(),
-    learning_rate=5e-4,
+    learning_rate=1e-4,
 )

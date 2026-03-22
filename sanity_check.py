@@ -4,6 +4,7 @@ from src.logger import ExperimentLogger
 from src.evaluation import Evaluation
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.experimental import enable_iterative_imputer
+from torch.utils.data import TensorDataset, DataLoader
 from sklearn.impute import IterativeImputer
 
 import pandas as pd
@@ -45,7 +46,7 @@ for _, value in days.items():
     day_tensor = torch.stack(value)
 
     input_data.append(day_tensor[:-1])
-    label_data.append(day_tensor[-1])
+    label_data.append(day_tensor[-1][0])
 
 input_data = torch.stack(input_data)
 label_data = torch.stack(label_data)
@@ -73,6 +74,95 @@ training_input = torch.tensor(train_imputed_2d).view(x, y, z)
 x, y, z = testing_input.shape
 testing_input_2d = torch.reshape(testing_input, (x * y, z))
 testing_imputed_2d = impute.transform(testing_input_2d)
-testing_input = torch.tensor(testing_input_2d).view(x, y, z)
+testing_input = torch.tensor(testing_imputed_2d).view(x, y, z)
 
 # Remove all input and respected label if the label == NaN
+mask_training = ~torch.isnan(training_label)
+training_input = training_input[mask_training]
+training_label = training_label[mask_training]
+
+mask_testing = ~torch.isnan(testing_label)
+testing_input = testing_input[mask_testing]
+testing_label = testing_label[mask_testing]
+
+# scale values 0-1
+training_min = training_input.amin(dim=(0, 1), keepdim=True)
+training_max = training_input.amax(dim=(0, 1), keepdim=True)
+training_input = (training_input - training_min) / (training_max - training_min + 1e-8)
+
+testing_min = testing_input.amin(dim=(0, 1), keepdim=True)
+testing_max = testing_input.amax(dim=(0, 1), keepdim=True)
+testing_input = (testing_input - training_min) / (training_max - training_min + 1e-8)
+
+target_scaler = MinMaxScaler(feature_range=(0,1))
+
+training_label = torch.tensor(target_scaler.fit_transform(training_label.reshape(-1, 1))).squeeze()
+testing_label = torch.tensor(target_scaler.transform(testing_label.reshape(-1, 1))).squeeze()
+
+# turn to dataloaders so i can batch it
+training_dataset = TensorDataset(training_input, training_label)
+testing_dataset = TensorDataset(testing_input, testing_label)
+
+training_dataloader = DataLoader(training_dataset, batch_size=16)
+testing_dataloader = DataLoader(testing_dataset, batch_size=16)
+
+# model setup
+model = DMOLSTM(sanity).to(device=device)
+optimiser = sanity.optimiser(model.parameters(), lr=sanity.learning_rate)
+
+logger = ExperimentLogger(sanity)
+
+# training loop
+for epoch in range(sanity.epochs):
+    training_loss = []
+    model.train()
+    for data, label in training_dataloader:
+        data = data.to(device=device, dtype=torch.float32)
+        label = label.to(device=device, dtype=torch.float32)
+
+        optimiser.zero_grad()
+        pred = model(data).squeeze()
+
+        loss = sanity.loss_fn(pred, label)
+        training_loss.append(loss.item())
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimiser.step()
+    
+    avg_loss = np.average(training_loss)
+    print(avg_loss)
+    logger.log_values([("training_loss", avg_loss)])
+
+# testing loop
+print("testing now")
+testing_loss = []
+predications = []
+labels = []
+model.eval()
+with torch.no_grad():
+    for data, label in testing_dataloader:
+        data = data.to(device=device, dtype=torch.float32)
+        label = label.to(device=device, dtype=torch.float32)
+
+        pred = model(data).squeeze()
+        
+        for pred, label in zip(pred, label):
+            predications.append(pred.item())
+            labels.append(label.item())
+
+            logger.log_values([("pred - actual",label.item() - pred.item())])
+
+        loss = sanity.loss_fn(pred, label)
+        testing_loss.append(loss.item())
+
+    print(np.average(testing_loss))
+
+    predications = torch.tensor(predications)
+    label = torch.tensor(labels)
+
+    evaluation = Evaluation(predications, labels, scale=False)
+
+    logger.save(evaluation, show_fig=True)
+
+

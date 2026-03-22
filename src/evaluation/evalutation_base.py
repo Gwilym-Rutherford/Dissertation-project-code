@@ -12,9 +12,14 @@ class Evaluation(ABC):
     NUM_CLASSES = 85
     MAX_FATIGUE_SCORE = 84
 
-    def __init__(self, predictions: torch.Tensor, labels: torch.Tensor):
+    def __init__(self, predictions: torch.Tensor, labels: torch.Tensor, scale=True):
+        
+        if not scale:
+            Evaluation.MAX_FATIGUE_SCORE = 1
+
         self.preds = predictions.squeeze() * Evaluation.MAX_FATIGUE_SCORE
-        self.labels = labels * Evaluation.MAX_FATIGUE_SCORE
+        self.labels = torch.tensor(labels * Evaluation.MAX_FATIGUE_SCORE)
+
 
     def compute_all_metrics(self) -> dict:
 

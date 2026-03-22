@@ -23,30 +23,46 @@ def dmo_into_dataloader(
     shuffle: bool = True,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
 
+    # remove nan lables and associated input
     dmo_data, dmo_labels = Transform.clean_dmo_data(dmo_data, dmo_labels)
-
-    Transform.fit_impute_dmo_data(dmo_data)
-
-    if shuffle:
-        perm_mask = torch.randperm(dmo_data.shape[0])
-        dmo_data = dmo_data[perm_mask]
-        dmo_labels = dmo_labels[perm_mask]
-
+    
+    # split data into training, validation and test sets
     train_data, validation_data, test_data = split_data(
         dmo_data, training, validation, test
     )
 
+    # split labels into training, validation and test sets
     train_label, validation_label, test_label = split_data(
         dmo_labels, training, validation, test
     )
 
+    # scale input to the range 0-1
+    train_data, validation_data, test_data = Transform.min_max_scale_input_data(
+        train_data, validation_data, test_data
+    )
+
+    # sclale label to the range 0-1
+    train_label, validation_label, test_label = Transform.normalise_dmo_label(
+        train_label, validation_label, test_label
+    )
+
+    # fit impute model on training data only
+    Transform.fit_impute_dmo_data(train_data)
+
     if uniform_method is not None:
-        dmo_data, dmo_labels = Transform.uniform_dmo(train_data, train_label, uniform_method)
+        dmo_data, dmo_labels = Transform.uniform_dmo(
+            train_data, train_label, uniform_method
+        )
         # plot_distribution(
         #     torch.Tensor.tolist(dmo_labels.to(dtype=torch.int8)),
         #     "testing_uniform_upsample_dmo",
         # )
         # quit()
+
+    train_data = Transform.imput_dmo_data(train_data)
+    validation_data = Transform.imput_dmo_data(validation_data)
+    test_data = Transform.imput_dmo_data(test_data)
+
 
     dmo_data_transform, dmo_label_transform = transforms
 
@@ -71,8 +87,14 @@ def dmo_into_dataloader(
         target_transform=dmo_label_transform,
     )
 
-    dataloader_training = DataLoader(dataset_training, batch_size=batch_size, shuffle=True)
-    dataloader_validation = DataLoader(dataset_validation, batch_size=batch_size, shuffle=True)
-    dataloader_testing = DataLoader(dataset_testing, batch_size=batch_size, shuffle=True)
+    dataloader_training = DataLoader(
+        dataset_training, batch_size=batch_size, shuffle=True
+    )
+    dataloader_validation = DataLoader(
+        dataset_validation, batch_size=batch_size, shuffle=True
+    )
+    dataloader_testing = DataLoader(
+        dataset_testing, batch_size=batch_size, shuffle=True
+    )
 
     return (dataloader_training, dataloader_testing, dataloader_validation)

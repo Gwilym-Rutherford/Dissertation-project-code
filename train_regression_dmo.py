@@ -45,20 +45,21 @@ dmo_features = [
 ]
 
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.ALL)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
 config = lstm_regression
 config.notes = "Regression with downsampling"
 
-dmo_data_transform = Compose([Transform.imput_dmo_data, Transform.center_dmo_data])
-dmo_label_transform = Compose([Transform.normalise_dmo_label])
+# dmo_data_transform = Compose([Transform.imput_dmo_data])
+dmo_data_transform = None
+dmo_label_transform = None
 
 print("loading into dataloaders")
 transforms = (dmo_data_transform, dmo_label_transform)
 train, validation, test = dmo_into_dataloader(
-    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=UniformMethod.UPSAMPLE
+    dmo_data, dmo_labels, config.batch_size, transforms, uniform_method=None
 )
 
 model = DMOLSTM(config).to(device=device)
@@ -66,7 +67,7 @@ optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
 
 print("Beginning training")
 lstm_train = LSTMRegressionTrain(
-    model=model, optimiser=optimiser, device=device, config=config
+    model=model, optimiser=optimiser, device=device, config=config, verbose=True
 )
 
 lstm_train.train(train, validation, test)

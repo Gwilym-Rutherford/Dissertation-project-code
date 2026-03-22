@@ -6,13 +6,14 @@ from math import ceil
 
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
+from sklearn.preprocessing import MinMaxScaler
 
 import numpy as np
 import pandas as pd
 import torch
 
 
-MASK_VALUE = 0
+MASK_VALUE = -1
 
 
 class Transform:
@@ -63,6 +64,34 @@ class Transform:
         return dmo_data
 
     @staticmethod
+    def min_max_scale_input_data(
+        training_input: torch.Tensor,
+        validation_input: torch.Tensor,
+        testing_input: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        train_mask = training_input != MASK_VALUE
+        t_min = training_input.masked_fill(~train_mask, float("inf")).amin(
+            dim=(0, 1), keepdim=True
+        )
+        t_max = training_input.masked_fill(~train_mask, float("-inf")).amax(
+            dim=(0, 1), keepdim=True
+        )
+
+        denom = t_max - t_min + 1e-8
+
+        def apply_scaling(data):
+            mask = data != MASK_VALUE
+            scaled_data = (data - t_min) / denom
+            return torch.where(mask, scaled_data, data)
+
+        return (
+            apply_scaling(training_input),
+            apply_scaling(validation_input),
+            apply_scaling(testing_input),
+        )
+
+    @staticmethod
     def center_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
         n_rows, _ = dmo_data.shape
 
@@ -85,27 +114,39 @@ class Transform:
 
     @classmethod
     def fit_impute_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
-        if len(dmo_data.shape) == 3:
-            samples, days, features = dmo_data.shape
-            dmo_data = dmo_data.view(samples * days, features)
-
-        print(dmo_data.shape)
-
-        cls.impute = IterativeImputer(random_state=0, missing_values=MASK_VALUE)
-        cls.impute.fit(dmo_data)
+        cls.impute = IterativeImputer(missing_values=MASK_VALUE, tol=1e-2, max_iter=100)
+        x, y, z = dmo_data.shape
+        dmo_data_input_2d = torch.reshape(dmo_data, (x * y, z))
+        cls.impute.fit(dmo_data_input_2d)
 
     @classmethod
     def imput_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
-        if len(dmo_data.shape) == 3:
-            samples, days, features = dmo_data.shape
-            dmo_data = dmo_data.view(samples * days, features)
-        
-        return torch.tensor(cls.impute.transform(dmo_data))
+        print("transforming with impute")
+        x, y, z = dmo_data.shape
+        dmo_data_input_2d = torch.reshape(dmo_data, (x * y, z))
+        dmo_data_imputed_2d = cls.impute.transform(dmo_data_input_2d)
+        return torch.tensor(dmo_data_imputed_2d).view(x, y, z)
 
     @staticmethod
-    def normalise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
-        max_score = 84
-        return dmo_label / max_score
+    def normalise_dmo_label(
+        training_labels,
+        validation_labels,
+        testing_labels: DMOTensor,
+        feature_range=(0, 1),
+    ) -> tuple[DMOTensor, DMOTensor, DMOTensor]:
+        scaler = MinMaxScaler(feature_range=feature_range)
+
+        training_labels = torch.tensor(
+            scaler.fit_transform(training_labels.reshape(-1, 1))
+        ).squeeze()
+        validation_labels = torch.tensor(
+            scaler.fit_transform(validation_labels.reshape(-1, 1))
+        ).squeeze()
+        testing_labels = torch.tensor(
+            scaler.fit_transform(testing_labels.reshape(-1, 1))
+        ).squeeze()
+
+        return training_labels, validation_labels, testing_labels
 
     @staticmethod
     def catagorise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
@@ -114,23 +155,22 @@ class Transform:
         n_catagories = 10
 
         catagory_width = max_theoretical_value / n_catagories
-        catagories = (dmo_label/catagory_width).floor().long()
+        catagories = (dmo_label / catagory_width).floor().long()
         return catagories
 
     @staticmethod
     def clean_dmo_data(
-    dmo_data: DMOTensor, labels: DMOTensor
+        dmo_data: DMOTensor, labels: DMOTensor
     ) -> tuple[DMOTensor, DMOTensor]:
-        mask = []
-        for i in range(len(dmo_data)):
-            if not torch.isnan(labels[i]) and dmo_data[i].sum().item() > 0:
-                mask.append(i)
+        label_nan_mask = ~torch.isnan(labels)
+        empty_dmo_data_mask = dmo_data.sum(dim=(1, 2)) != 0
+
+        mask = label_nan_mask & empty_dmo_data_mask
 
         labels = labels[mask]
         dmo_data = dmo_data[mask]
 
         return dmo_data, labels
-
 
     @staticmethod
     # should be dim = 1 for regular training, but 2 for random forest
@@ -158,13 +198,13 @@ class Transform:
 
         bin_counts = torch.zeros(bins, dtype=torch.int8)
         mask = []
-        bin_members = [[] for _ in range(bins)] 
+        bin_members = [[] for _ in range(bins)]
 
         for i, bin_id in enumerate(bin_indices):
             id_ = bin_id.item() - 1
             if bin_counts[id_] < threshold:
                 bin_counts[id_] += 1
-                bin_members[id_].append(i) 
+                bin_members[id_].append(i)
                 mask.append(i)
 
         if method == UniformMethod.UPSAMPLE:
@@ -192,15 +232,4 @@ class Transform:
         counts = torch.sum(mask, dim=1)
         counts = torch.clamp(counts, min=1)
         return sum_vals / counts
-
-
-    # @staticmethod
-    # def downsample_sensor_data(sensor_data: torch.Tensor) -> torch.Tensor:
-    #     # a somewhat arbitrary number as a starting point
-    #     samples = 1000
-
-
-
-
-        
 

@@ -3,8 +3,6 @@ from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.core.enums import MileStone, UniformMethod
 from src.pipeline import dmo_for_random_forest
 from src.model import DMORandomForest
-from src.train import LSTMScaleTrain
-from torchvision.transforms import Compose
 from src.core.data_transforms import Transform
 
 import torch
@@ -44,7 +42,7 @@ dmo_features = [
 ]
 
 print("getting data")
-pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.T2)
+pdd = PatientDataDispatcher("config/config.yaml", dmo_features, MileStone.ALL)
 ids = list(set(pdd.metadata["Local.Participant"].to_list()))
 dmo_data, dmo_labels = pdd.get_patient_data(PatientDataType.DMO, ids=ids)
 
@@ -76,12 +74,3 @@ random_forest.train(train_data, train_label)
 
 print(random_forest.score(test_data, test_label))
 
-# model = DMOLSTM(config).to(device=device)
-# optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
-
-# print("Beginning training")
-# lstm_train = LSTMScaleTrain(
-#     model=model, optimiser=optimiser, device=device, config=config
-# )
-
-# lstm_train.train(train, validation, test)

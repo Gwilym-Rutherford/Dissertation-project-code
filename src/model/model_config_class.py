@@ -6,7 +6,7 @@ class ModelConfig:
     name: str
     model_type: str
 
-    input_size: int
+    input_size: int | tuple
     hidden_size: int
     num_layers: int
     output_size: int

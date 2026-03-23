@@ -19,6 +19,7 @@ class DMOLSTM(nn.Module):
             hidden_size=config.hidden_size,
             num_layers=config.num_layers,
             batch_first=True,
+            dropout=0.2 if config.num_layers > 1 else 0,
         )
 
         self.linear = nn.Linear(config.hidden_size, config.output_size)

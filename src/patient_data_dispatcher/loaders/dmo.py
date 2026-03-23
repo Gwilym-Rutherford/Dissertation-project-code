@@ -37,10 +37,14 @@ class DMOLoader(BaseLoader):
         else:
             self.dmo_features = None
 
-    def __call__(self, ids: ListIds) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
-        return self.get_dmo_data(ids)
+    def __call__(
+        self, ids: ListIds, static_features: pd.DataFrame
+    ) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
+        return self.get_dmo_data(ids, static_features)
 
-    def get_dmo_data(self, ids: ListIds) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
+    def get_dmo_data(
+        self, ids: ListIds, static_features: pd.DataFrame
+    ) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
 
         dir_list = os.listdir(self.path)
 
@@ -65,6 +69,17 @@ class DMOLoader(BaseLoader):
             quit(-1)
 
         filtered_by_ids = dmo_data[dmo_data["participant_id"].isin(ids)]
+
+        # add static features like age, width and height
+        filtered_by_ids = pd.merge(
+            filtered_by_ids,
+            static_features,
+            left_on="participant_id",
+            right_on="Local.Participant",
+            how="left",
+        )
+        filtered_by_ids = filtered_by_ids.drop(columns=['Local.Participant'])
+
 
         # get selected dmo features or all
         if self.dmo_features is not None:

@@ -25,6 +25,6 @@ class PatientDataDispatcher:
             ),
         }
 
-    def get_patient_data(self, data_type: PatientDataType, ids: ListIds = None):
+    def get_patient_data(self, data_type: PatientDataType, ids: ListIds = None, static_features=None):
         data_loader = self.fetcher.get(data_type)
-        return data_loader(ids)
+        return data_loader(ids, static_features=static_features)

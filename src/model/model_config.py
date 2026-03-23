@@ -6,7 +6,7 @@ from torch.optim import Adam
 lstm_regression = ModelConfig(
     name="lstm_regression",
     model_type="LSTM",
-    input_size=26,
+    input_size=8,
     hidden_size=128,
     num_layers=2,
     output_size=1,

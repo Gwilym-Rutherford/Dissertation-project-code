@@ -7,31 +7,34 @@ from src.model.model_config_class import ModelConfig
 # the final output should be from the short term memory
 
 
-class DMOLSTM(nn.Module):
+class ConvolutionLSTM(nn.Module):
     def __init__(self, config: ModelConfig):
         super().__init__()
 
         self.hidden_size = config.hidden_size
         self.layer_size = config.num_layers
 
+        self.conv = nn.Sequential(
+            nn.Conv1d(1, 27, 4, 1, 1),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+        )
+
         self.lstm = nn.LSTM(
             input_size=config.input_size,
             hidden_size=config.hidden_size,
             num_layers=config.num_layers,
             batch_first=True,
-            #dropout=0.2 if config.num_layers > 1 else 0,
+            dropout=0.2 if config.num_layers > 1 else 0,
         )
 
         self.linear = nn.Linear(config.hidden_size, config.output_size)
         
-        # regular relu can cause loss to not change because inital state might 
-        # cause gradients to be 0 meaning no change will happen so leaky relu is 
-        # used to prevent this
-        self.relu = nn.LeakyReLU()
+        self.relu = nn.ReLU()
 
     def forward(self, x):
-
         x = x.to(dtype=torch.float32)
+        #x = self.conv(x)
 
         batch_size = x.size(0)
         device = x.device

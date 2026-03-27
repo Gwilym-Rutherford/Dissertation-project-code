@@ -95,7 +95,8 @@ class MileStoneLoader(BaseLoader):
             patient_milestones = []
             for visit in milestones:
                 visit = visit[1].head(7).drop(["participant_id", "visit_type"], axis=1)
-                visit.fillna(-1)
+                visit = visit.fillna(-1)
+                visit = visit.replace("nan", -1)
                 visit_mat = visit.to_numpy()
 
                 rows, cols = visit_mat.shape

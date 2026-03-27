@@ -1,2 +1,3 @@
 from .dmo.dmo_into_dataloader import dmo_into_dataloader
 from .dmo.dmo_for_random_forest import dmo_for_random_forest
+from .dmo.change_in_fatigue import change_dmo_into_dataloader

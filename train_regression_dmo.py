@@ -4,6 +4,9 @@ from src.core.enums import MileStone
 from src.model import lstm_regression
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import TensorDataset, DataLoader
+from torchmetrics.regression import R2Score
+
+import matplotlib.pyplot as plt
 
 import numpy as np
 import torch
@@ -14,33 +17,58 @@ torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
+# dmo_features = [
+#     "wb_all_sum_d",
+#     "walkdur_all_sum_d",
+#     "wbsteps_all_sum_d",
+#     "wbdur_all_avg_d",
+#     "wbdur_all_p90_d",
+#     "wbdur_all_var_d",
+#     "cadence_all_avg_d",
+#     "strdur_all_avg_d",
+#     "cadence_all_var_d",
+#     "strdur_all_var_d",
+#     "ws_1030_avg_d",
+#     "strlen_1030_avg_d",
+#     "wb_10_sum_d",
+#     "ws_10_p90_d",
+#     "wb_30_sum_d",
+#     "ws_30_avg_d",
+#     "strlen_30_avg_d",
+#     "cadence_30_avg_d",
+#     "strdur_30_avg_d",
+#     "ws_30_p90_d",
+#     "cadence_30_p90_d",
+#     "ws_30_var_d",
+#     "strlen_30_var_d",
+#     "wb_60_sum_d",
+#     "total_worn_h_d",
+#     "total_worn_during_waking_h_d",
+# ]
+
+# dmo_features = [
+#     "ws_30_avg_d",
+#     "strdur_all_var_d",
+#     "wbdur_all_p90_d",
+#     "wbsteps_all_sum_d",
+#     "total_worn_during_waking_h_d",
+# ]
+# dmo feature have been selected through variance without min max normalising
 dmo_features = [
-    "wb_all_sum_d",
-    "walkdur_all_sum_d",
     "wbsteps_all_sum_d",
-    "wbdur_all_avg_d",
-    "wbdur_all_p90_d",
+    "wb_all_sum_d",
     "wbdur_all_var_d",
-    "cadence_all_avg_d",
-    "strdur_all_avg_d",
-    "cadence_all_var_d",
-    "strdur_all_var_d",
-    "ws_1030_avg_d",
-    "strlen_1030_avg_d",
     "wb_10_sum_d",
-    "ws_10_p90_d",
-    "wb_30_sum_d",
-    "ws_30_avg_d",
-    "strlen_30_avg_d",
-    "cadence_30_avg_d",
-    "strdur_30_avg_d",
-    "ws_30_p90_d",
+    "walkdur_all_sum_d",
+]
+
+# dmo features sorted by variance after min max normalising
+dmo_features = [
     "cadence_30_p90_d",
-    "ws_30_var_d",
-    "strlen_30_var_d",
-    "wb_60_sum_d",
-    "total_worn_h_d",
-    "total_worn_during_waking_h_d",
+    "cadence_30_avg_d",
+    "ws_30_p90_d",
+    "strlen_1030_avg_d",
+    "cadence_all_avg_d",
 ]
 
 print("getting data")
@@ -102,6 +130,8 @@ def format_input_data(input_data, label_data):
 
 # x validation loop
 accuracy = []
+predicted_r2 = []
+label_r2 = []
 n_patients, n_visit, n_day, n_features = dmo_data.shape
 for patient_index in range(n_patients):
     print(f"X Validation {patient_index}")
@@ -179,6 +209,8 @@ for patient_index in range(n_patients):
     # testing loop
     testing_loss = []
     model.eval()
+    predicted_value = []
+    actual_value = []
     with torch.no_grad():
         for data, label in testing_dataloader:
             data = data.to(device=device, dtype=torch.float32)
@@ -187,8 +219,9 @@ for patient_index in range(n_patients):
             label = label[:, 4, 0].cpu()
             pred = model(data).view(-1).cpu()
 
-            print(label)
-            print(pred)
+            predicted_r2.append(pred[0])
+            label_r2.append(label[0])
+
             dist = abs(label[0] - pred[0])
             if dist < 0.1:
                 accuracy.append(1)
@@ -200,6 +233,30 @@ for patient_index in range(n_patients):
 
     
     print(f"Testing loss: {np.average(testing_loss)}")
+    
+    
 
 print(f"Accuracy: {np.sum(accuracy)/len(accuracy) * 100}")
-    
+
+predicted = torch.tensor(predicted_r2)
+label = torch.tensor(label_r2)
+
+r2_calc = R2Score()
+r2 = r2_calc(predicted, label).item()
+print(f"R^2 {r2}")
+
+fig, ax = plt.subplots(figsize=(8, 8))
+
+ax.scatter(predicted_r2, label_r2, alpha=0.5, edgecolors="k")
+
+lims = [
+    np.min([ax.get_xlim(), ax.get_ylim()]),
+    np.max([ax.get_xlim(), ax.get_ylim()]),
+]
+ax.plot(lims, lims, "r--", alpha=0.75, zorder=0, label="Perfect Prediction")
+
+ax.set_xlabel("Actual Values")
+ax.set_ylabel("Predicted Values")
+ax.set_title("Actual vs. Predicted (Regression)")
+ax.legend()
+plt.show()

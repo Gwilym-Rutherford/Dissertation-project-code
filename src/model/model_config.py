@@ -6,14 +6,14 @@ from torch.optim import Adam
 lstm_regression = ModelConfig(
     name="lstm_regression",
     model_type="LSTM",
-    input_size=8,
+    input_size=183,
     hidden_size=128,
     num_layers=2,
     output_size=1,
     batch_size=16,
-    epochs=100,
+    epochs=50,
     optimiser=Adam,
-    loss_fn=HuberLoss(),
+    loss_fn=MSELoss(),
     learning_rate=5e-4,
 )
 

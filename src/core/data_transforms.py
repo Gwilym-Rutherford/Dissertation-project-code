@@ -13,7 +13,7 @@ import pandas as pd
 import torch
 
 
-MASK_VALUE = -1
+MASK_VALUE = -1.0
 
 
 class Transform:
@@ -115,17 +115,24 @@ class Transform:
     @classmethod
     def fit_impute_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
         cls.impute = IterativeImputer(missing_values=MASK_VALUE, tol=1e-2, max_iter=100)
-        x, y, z = dmo_data.shape
-        dmo_data_input_2d = torch.reshape(dmo_data, (x * y, z))
+        patient, visits, day, features = dmo_data.shape
+        dmo_data_input_2d = dmo_data.reshape(patient * visits * day, features)
+        torch.nan_to_num_(dmo_data_input_2d, MASK_VALUE)
         cls.impute.fit(dmo_data_input_2d)
 
     @classmethod
     def imput_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
-        print("transforming with impute")
-        x, y, z = dmo_data.shape
-        dmo_data_input_2d = torch.reshape(dmo_data, (x * y, z))
-        dmo_data_imputed_2d = cls.impute.transform(dmo_data_input_2d)
-        return torch.tensor(dmo_data_imputed_2d).view(x, y, z)
+        patients, visits, day, features = dmo_data.shape
+
+        for patient in range(patients):
+            patient_mat = dmo_data[patient]
+            x, y, z = patient_mat.shape
+            patient_mat = patient_mat.reshape(x * y, z)
+            patient_imputed = cls.impute.transform(patient_mat)
+            dmo_data[patient] = torch.tensor(patient_imputed.reshape(x, y, z))
+
+        return dmo_data
+
 
     @staticmethod
     def normalise_dmo_label(

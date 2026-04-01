@@ -1,5 +1,4 @@
 from .lstm import DMOLSTM
-from .conv_lstm import ConvolutionLSTM
 from .random_forest_classifier import DMORandomForest
 
 from .model_config import lstm_regression

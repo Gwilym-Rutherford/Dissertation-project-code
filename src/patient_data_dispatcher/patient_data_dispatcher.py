@@ -17,20 +17,15 @@ class PatientDataDispatcher:
 
         self.fetcher = {
             PatientDataType.META: MetaLoader(config_path, milestone),
-
             PatientDataType.DMO: DMOLoader(
                 config_path, milestone, self.metadata, dmo_features
             ),
-
             PatientDataType.SENSOR: SensorLoader(config_path, self.metadata, milestone),
-
             PatientDataType.MILESTONE: MileStoneLoader(
                 config_path, milestone, self.metadata, dmo_features
             ),
         }
 
-    def get_patient_data(
-        self, data_type: PatientDataType, ids: ListIds = None, static_features=None
-    ):
+    def get_patient_data(self, data_type: PatientDataType, ids: ListIds = None):
         data_loader = self.fetcher.get(data_type)
-        return data_loader(ids, static_features=static_features)
+        return data_loader(ids)

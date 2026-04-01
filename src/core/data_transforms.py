@@ -18,15 +18,13 @@ MASK_VALUE = -1.0
 
 class Transform:
     @staticmethod
+    # prepends missing rows
     def fix_missing_dmo_data(dmo_data: DataFrame) -> DataFrame:
+        dmo_data = dmo_data.head(7)
         dmo_data.fillna(MASK_VALUE, inplace=True)
-        number_of_milestones = 5
-        expected_shape = (len(Day), number_of_milestones)
+        expected_n_rows = len(Day)
 
-        if dmo_data.shape == expected_shape:
-            return dmo_data
-
-        n_missing_rows = expected_shape[0] - dmo_data.shape[0]
+        n_missing_rows = expected_n_rows - dmo_data.shape[0]
 
         if n_missing_rows > 0:
             padding = pd.DataFrame(

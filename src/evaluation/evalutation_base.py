@@ -13,7 +13,7 @@ class Evaluation(ABC):
     NUM_CLASSES = 85
     MAX_FATIGUE_SCORE = 84
 
-    def __init__(self, predictions: torch.Tensor, labels: torch.Tensor, scale=True):
+    def __init__(self, predictions: torch.Tensor, labels: torch.Tensor, scale=False):
 
         if not scale:
             Evaluation.MAX_FATIGUE_SCORE = 1

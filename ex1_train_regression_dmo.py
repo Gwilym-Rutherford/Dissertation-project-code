@@ -2,7 +2,7 @@ from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.model import DMOLSTM
 from src.core.enums import MileStone
 from src.model import lstm_regression
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
+from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import TensorDataset, DataLoader
 from torchmetrics.regression import R2Score
 
@@ -17,52 +17,35 @@ torch.set_printoptions(linewidth=200, sci_mode=False, precision=4)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
-# dmo_features = [
-#     "wb_all_sum_d",
-#     "walkdur_all_sum_d",
-#     "wbsteps_all_sum_d",
-#     "wbdur_all_avg_d",
-#     "wbdur_all_p90_d",
-#     "wbdur_all_var_d",
-#     "cadence_all_avg_d",
-#     "strdur_all_avg_d",
-#     "cadence_all_var_d",
-#     "strdur_all_var_d",
-#     "ws_1030_avg_d",
-#     "strlen_1030_avg_d",
-#     "wb_10_sum_d",
-#     "ws_10_p90_d",
-#     "wb_30_sum_d",
-#     "ws_30_avg_d",
-#     "strlen_30_avg_d",
-#     "cadence_30_avg_d",
-#     "strdur_30_avg_d",
-#     "ws_30_p90_d",
-#     "cadence_30_p90_d",
-#     "ws_30_var_d",
-#     "strlen_30_var_d",
-#     "wb_60_sum_d",
-#     "total_worn_h_d",
-#     "total_worn_during_waking_h_d",
-# ]
-
-# dmo_features = [
-#     "ws_30_avg_d",
-#     "strdur_all_var_d",
-#     "wbdur_all_p90_d",
-#     "wbsteps_all_sum_d",
-#     "total_worn_during_waking_h_d",
-# ]
-# dmo feature have been selected through variance without min max normalising
 dmo_features = [
-    "wbsteps_all_sum_d",
     "wb_all_sum_d",
-    "wbdur_all_var_d",
-    "wb_10_sum_d",
     "walkdur_all_sum_d",
+    "wbsteps_all_sum_d",
+    "wbdur_all_avg_d",
+    "wbdur_all_p90_d",
+    "wbdur_all_var_d",
+    "cadence_all_avg_d",
+    "strdur_all_avg_d",
+    "cadence_all_var_d",
+    "strdur_all_var_d",
+    "ws_1030_avg_d",
+    "strlen_1030_avg_d",
+    "wb_10_sum_d",
+    "ws_10_p90_d",
+    "wb_30_sum_d",
+    "ws_30_avg_d",
+    "strlen_30_avg_d",
+    "cadence_30_avg_d",
+    "strdur_30_avg_d",
+    "ws_30_p90_d",
+    "cadence_30_p90_d",
+    "ws_30_var_d",
+    "strlen_30_var_d",
+    "wb_60_sum_d",
+    "total_worn_h_d",
+    "total_worn_during_waking_h_d",
 ]
 
-# dmo features sorted by variance after min max normalising
 dmo_features = [
     "cadence_30_p90_d",
     "cadence_30_avg_d",
@@ -105,28 +88,22 @@ dmo_labels = dmo_labels[patient_indexs]
 config = lstm_regression
 config.notes = "None"
 
-def format_input_data(input_data, label_data):
+
+def format_label_data(label_data):
+    patient, visit, label = label_data.shape
+    label_data = label_data.reshape(patient * visit, label)
+    return label_data
+
+
+def format_input_data(input_data):
     if len(input_data.shape) < 4:
         input_data = input_data.unsqueeze(dim=0)
 
     patient, visit, day, features = input_data.shape
+    input_data = input_data.reshape(patient * visit, day, features)
 
-    formatted_input_data = torch.zeros((patient, visit, (day * features) + 1))
+    return input_data
 
-    for p in range(patient):
-        for v in range(visit):
-            if v == 0:
-                label = torch.tensor([0])
-            else:
-                label =label_data[p, v - 1]
-
-            features = torch.flatten(input_data[p, v])
-
-            features_and_lagged_label = torch.concatenate((features, label))
-
-            formatted_input_data[p, v] = features_and_lagged_label
-    
-    return formatted_input_data
 
 # x validation loop
 accuracy = []
@@ -138,13 +115,13 @@ for patient_index in range(n_patients):
     # split data
     train_indexes = [i for i in range(n_patients) if i != patient_index]
     train_data = dmo_data[train_indexes].squeeze(dim=0)
-    train_label = dmo_labels[train_indexes].squeeze(dim=0)
+    train_label = dmo_labels[train_indexes]
 
     test_data = dmo_data[patient_index]
     test_label = dmo_labels[patient_index].unsqueeze(dim=0)
 
     # fit and transform scaler on training data only
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler = MinMaxScaler()
     patients, visit, day, features = train_data.shape
     train_data_2d = train_data.reshape(patients * visit * day, features)
     train_data_2d_scaled = scaler.fit_transform(train_data_2d)
@@ -172,45 +149,32 @@ for patient_index in range(n_patients):
     test_data = torch.from_numpy(test_data)
     test_label = torch.from_numpy(test_label)
 
-
     # format data
-    train_data = format_input_data(train_data, train_label)
-    test_data = format_input_data(test_data, test_label)
+    train_data = format_input_data(train_data)
+    train_label = format_label_data(train_label)
+
+    test_data = format_input_data(test_data)
+    test_label = format_label_data(test_label)
 
     # convert to dataloaders for batching
     training_dataset = TensorDataset(train_data, train_label)
     testing_dataset = TensorDataset(test_data, test_label)
 
-    training_dataloader = DataLoader(training_dataset, batch_size=config.batch_size, shuffle=True)
-    testing_dataloader = DataLoader(testing_dataset, batch_size=config.batch_size, shuffle=True)
-
-    # for a, b in training_dataloader:
-    #     print(a.shape)
-    #     print(b.shape)
-    #     for c, d in testing_dataloader:
-    #         print(c.shape)
-    #         print(d.shape)
-    #         quit()
-
+    training_dataloader = DataLoader(training_dataset, batch_size=config.batch_size)
+    testing_dataloader = DataLoader(testing_dataset, batch_size=config.batch_size)
 
     model = DMOLSTM(config).to(device=device)
     optimiser = config.optimiser(model.parameters(), lr=config.learning_rate)
-    
+
     for epoch in range(config.epochs):
         training_loss = []
         model.train()
         for data, label in training_dataloader:
             data = data.to(device=device, dtype=torch.float32)
-            label = label.to(device=device, dtype=torch.float32)
-            print(label.shape)
-            print(label)
-            quit()
-            
-            label = label[:, 4, 0]
-
+            label = label.to(device=device, dtype=torch.float32).squeeze(dim=0)
 
             optimiser.zero_grad()
-            pred = model(data).squeeze()
+            pred = model(data).squeeze(dim=0)
 
             loss = config.loss_fn(pred, label)
             training_loss.append(loss.item())
@@ -227,10 +191,15 @@ for patient_index in range(n_patients):
     with torch.no_grad():
         for data, label in testing_dataloader:
             data = data.to(device=device, dtype=torch.float32)
-            label = label.to(device=device, dtype=torch.float32)
+            label = label.to(device=device, dtype=torch.float32).squeeze(dim=0)
 
-            label = label[:, 4, 0].cpu()
-            pred = model(data).view(-1).cpu()
+            pred = model(data).squeeze(dim=0)
+
+            loss = config.loss_fn(pred, label)
+            testing_loss.append(loss.item())
+
+            pred = pred.cpu()
+            label = label.cpu()
 
             predicted_r2.append(pred[0])
             label_r2.append(label[0])
@@ -240,16 +209,11 @@ for patient_index in range(n_patients):
                 accuracy.append(1)
             else:
                 accuracy.append(0)
-                
-            loss = config.loss_fn(pred, label)
-            testing_loss.append(loss.item())
 
-    
     print(f"Testing loss: {np.average(testing_loss)}")
-    
-    
 
-print(f"Accuracy: {np.sum(accuracy)/len(accuracy) * 100}")
+
+print(f"Accuracy: {np.sum(accuracy) / len(accuracy) * 100}")
 
 predicted = torch.tensor(predicted_r2)
 label = torch.tensor(label_r2)

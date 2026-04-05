@@ -6,7 +6,9 @@ from math import ceil
 
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from torch.utils.data import TensorDataset, DataLoader
 
 import numpy as np
 import pandas as pd
@@ -35,157 +37,6 @@ class Transform:
             dmo_data = pd.concat([padding, dmo_data], axis=0)
 
         return dmo_data
-
-    @staticmethod
-    def normalise_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
-        n_rows, _ = dmo_data.shape
-
-        for row in range(n_rows):
-            day_tensor = dmo_data[row, :]
-            real_values_index = day_tensor != MASK_VALUE
-            real_values = day_tensor[real_values_index]
-
-            if torch.numel(real_values) == 0:
-                continue
-
-            min_value = torch.min(real_values)
-            max_value = torch.max(real_values)
-            diff = max_value - min_value
-
-            if diff != 0:
-                normalised_tensor = (day_tensor[real_values_index] - min_value) / (
-                    max_value - min_value
-                )
-            else:
-                normalised_tensor = day_tensor[real_values_index] = 0
-
-            dmo_data[row, real_values_index] = normalised_tensor
-
-        return dmo_data
-
-    @staticmethod
-    def min_max_scale_input_data(
-        training_input: torch.Tensor,
-        validation_input: torch.Tensor,
-        testing_input: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-
-        train_mask = training_input != MASK_VALUE
-        t_min = training_input.masked_fill(~train_mask, float("inf")).amin(
-            dim=(0, 1), keepdim=True
-        )
-        t_max = training_input.masked_fill(~train_mask, float("-inf")).amax(
-            dim=(0, 1), keepdim=True
-        )
-
-        denom = t_max - t_min + 1e-8
-
-        def apply_scaling(data):
-            mask = data != MASK_VALUE
-            scaled_data = (data - t_min) / denom
-            return torch.where(mask, scaled_data, data)
-
-        return (
-            apply_scaling(training_input),
-            apply_scaling(validation_input),
-            apply_scaling(testing_input),
-        )
-
-    @staticmethod
-    def center_dmo_data(dmo_data: DMOTensor) -> DMOTensor:
-        n_rows, _ = dmo_data.shape
-
-        for row in range(n_rows):
-            day_tensor = dmo_data[row, :]
-            real_values_index = day_tensor != MASK_VALUE
-            real_values = day_tensor[real_values_index]
-
-            if torch.numel(real_values) == 0:
-                continue
-
-            mean = torch.mean(real_values)
-            std = torch.std(real_values)
-
-            normalised_tensor = (day_tensor[real_values_index] - mean) / std
-
-            dmo_data[row, real_values_index] = normalised_tensor
-
-        return dmo_data
-
-    @classmethod
-    def fit_impute_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
-        cls.impute = IterativeImputer(missing_values=MASK_VALUE, tol=1e-2, max_iter=100)
-        patient, visits, day, features = dmo_data.shape
-        dmo_data_input_2d = dmo_data.reshape(patient * visits * day, features)
-        torch.nan_to_num_(dmo_data_input_2d, MASK_VALUE)
-        cls.impute.fit(dmo_data_input_2d)
-
-    @classmethod
-    def imput_dmo_data(cls, dmo_data: DMOTensor) -> DMOTensor:
-        patients, visits, day, features = dmo_data.shape
-
-        for patient in range(patients):
-            patient_mat = dmo_data[patient]
-            x, y, z = patient_mat.shape
-            patient_mat = patient_mat.reshape(x * y, z)
-            patient_imputed = cls.impute.transform(patient_mat)
-            dmo_data[patient] = torch.tensor(patient_imputed.reshape(x, y, z))
-
-        return dmo_data
-
-
-    @staticmethod
-    def normalise_dmo_label(
-        training_labels,
-        validation_labels,
-        testing_labels: DMOTensor,
-        feature_range=(0, 1),
-    ) -> tuple[DMOTensor, DMOTensor, DMOTensor]:
-        scaler = MinMaxScaler(feature_range=feature_range)
-
-        training_labels = torch.tensor(
-            scaler.fit_transform(training_labels.reshape(-1, 1))
-        ).squeeze()
-        validation_labels = torch.tensor(
-            scaler.fit_transform(validation_labels.reshape(-1, 1))
-        ).squeeze()
-        testing_labels = torch.tensor(
-            scaler.fit_transform(testing_labels.reshape(-1, 1))
-        ).squeeze()
-
-        return training_labels, validation_labels, testing_labels
-
-    @staticmethod
-    def catagorise_dmo_label(dmo_label: DMOTensor) -> DMOTensor:
-        max_theoretical_value = 21 * 5
-        # if changing this make sure to change the output size for lstm_scale
-        n_catagories = 10
-
-        catagory_width = max_theoretical_value / n_catagories
-        catagories = (dmo_label / catagory_width).floor().long()
-        return catagories
-
-    @staticmethod
-    def clean_dmo_data(
-        dmo_data: DMOTensor, labels: DMOTensor
-    ) -> tuple[DMOTensor, DMOTensor]:
-        label_nan_mask = ~torch.isnan(labels)
-        empty_dmo_data_mask = dmo_data.sum(dim=(1, 2)) != 0
-
-        mask = label_nan_mask & empty_dmo_data_mask
-
-        labels = labels[mask]
-        dmo_data = dmo_data[mask]
-
-        return dmo_data, labels
-
-    @staticmethod
-    # should be dim = 1 for regular training, but 2 for random forest
-    def mask_dmo_data(dmo_data: DMOTensor, dim: int = 1) -> DMOTensor:
-        mask_boolean = (dmo_data != MASK_VALUE).to(torch.float32)
-        mask_concat = torch.concatenate((dmo_data, mask_boolean), dim=2)
-
-        return mask_concat
 
     @staticmethod
     def uniform_dmo(
@@ -226,17 +77,170 @@ class Transform:
         return dmo_data[mask_tensor], dmo_labels[mask_tensor]
 
     @staticmethod
-    def scale_output_to_single_value(scale_output: torch.Tensor) -> torch.Tensor:
-        values, indices = torch.max(scale_output, dim=1)
-        return values
+    def format_label_data(label_data: DMOTensor):
+        patient, visit, label = label_data.shape
+        label_data = label_data.reshape(patient * visit, label)
+        return label_data
 
     @staticmethod
-    def average_non_missing(data: torch.Tensor) -> torch.Tensor:
-        mask = (data != MASK_VALUE).to(torch.long)
+    def format_input_data(input_data: DMOTensor):
+        if len(input_data.shape) < 4:
+            input_data = input_data.unsqueeze(dim=0)
 
-        clean_data = data * mask
-        sum_vals = torch.sum(clean_data, dim=1)
-        counts = torch.sum(mask, dim=1)
-        counts = torch.clamp(counts, min=1)
-        return sum_vals / counts
+        patient, visit, day, features = input_data.shape
+        input_data = input_data.reshape(patient * visit, day, features)
 
+        return input_data
+
+    @staticmethod
+    def format_input_data_delta_day(input_data: DMOTensor):
+        if len(input_data.shape) < 4:
+            input_data = input_data.unsqueeze(dim=0)
+
+        patients, visits, days, features = input_data.shape
+
+        delta_features = torch.zeros(patients, visits, days - 1, features)
+
+        for patient in range(patients):
+            for visit in range(visits):
+                day_feature = input_data[patient, visit]
+
+                reference_features = day_feature[0, :]
+                for day in range(days - 1):
+                    updated_feature = day_feature[day + 1, :] - reference_features
+                    delta_features[patient, visit, day] = updated_feature
+
+        input_data = delta_features.reshape(patients * visits, days - 1, features)
+
+        return input_data
+
+    @staticmethod
+    def format_input_data_delta_visit(input_data: DMOTensor):
+        if len(input_data.shape) < 4:
+            input_data = input_data.unsqueeze(dim=0)
+
+        patients, visits, days, features = input_data.shape
+
+        delta_visits = torch.zeros(patients, visits - 1, days, features)
+        for patient in range(patients):
+            reference_visit = input_data[patient, 0]
+            for visit in range(visits - 1):
+                updated_visit = input_data[patient, visit + 1] - reference_visit
+                delta_visits[patient, visit] = updated_visit
+
+        input_data = delta_visits.reshape(patients * (visits - 1), days, features)
+
+        return input_data
+
+    @staticmethod
+    def format_label_data_delta_visit(label_data: DMOTensor):
+        patients, visits, labels = label_data.shape
+
+        delta_labels = torch.zeros(patients * (visits - 1), labels)
+        for patient in range(patients):
+            reference_label = label_data[patient, 0]
+
+            for visit in range(visits - 1):
+                updated_label = label_data[patient, visit + 1] - reference_label
+                delta_labels[patient] = updated_label
+
+        label_data = delta_labels.reshape(patients * (visits - 1), labels)
+        return label_data
+
+    def fit_transform_dmo_data(self, data: DMOTensor):
+        self.scaler = MinMaxScaler()
+        # self.scaler = StandardScaler()
+
+        patients, visit, day, features = data.shape
+        data_2d = data.reshape(patients * visit * day, features)
+        data_2d_scaled = self.scaler.fit_transform(data_2d)
+        data = data_2d_scaled.reshape(patients, visit, day, features)
+
+        return data
+
+    def transform_dmo_data(self, data: DMOTensor):
+        if len(data.shape) > 3:
+            data = data.squeeze(dim=0)
+
+        visit, day, features = data.shape
+        data_2d = data.reshape(visit * day, features)
+        data_2d_scaled = self.scaler.transform(data_2d)
+        data = data_2d_scaled.reshape(visit, day, features)
+
+        return data
+
+    def fit_transform_dmo_labels(self, label: DMOTensor):
+        self.scaler = MinMaxScaler()
+        # self.scaler = StandardScaler()
+
+        patients, visit, value = label.shape
+        label_2d = self.scaler.fit_transform(label.reshape(patients * visit, value))
+        label = label_2d.reshape(patients, visit, value)
+
+        return label
+
+    def transform_dmo_labels(self, label: DMOTensor):
+        patients, visit, value = label.shape
+        label_2d = self.scaler.transform(label.reshape(patients * visit, value))
+        label = label_2d.reshape(patients, visit, value)
+
+        return label
+
+    @staticmethod
+    def format_input_data_time_seq_days(input_data: DMOTensor):
+        if len(input_data.shape) < 4:
+            input_data = input_data.unsqueeze(dim=0)
+
+        patient, visit, day, features = input_data.shape
+        input_data = input_data.reshape(patient * visit, day, features)
+
+        return input_data
+
+    @staticmethod
+    def format_label_time_seq_visit(label_data: DMOTensor):
+        patient, visit, label = label_data.shape
+        label_data = label_data.reshape(patient * visit, label)
+        return label_data
+
+    @staticmethod
+    def data_to_dataloaders(data: DMOTensor, label: DMOTensor, **kwargs):
+        dataset = TensorDataset(data, label)
+        return DataLoader(dataset, **kwargs)
+
+    @staticmethod
+    def format_input_data_lag_label(input_data, label_data):
+        if len(input_data.shape) < 4:
+            input_data = input_data.unsqueeze(dim=0)
+
+        patient, visit, day, features = input_data.shape
+        formatted_input_data = torch.zeros((patient, visit, (day * features) + 1))
+
+        for p in range(patient):
+            for v in range(visit):
+                if v == 0:
+                    label = torch.tensor([0])
+                else:
+                    label = label_data[p, v - 1]
+                features = torch.flatten(input_data[p, v])
+                features_and_lagged_label = torch.concatenate((features, label))
+                formatted_input_data[p, v] = features_and_lagged_label
+
+        return formatted_input_data
+
+    @staticmethod
+    def format_input_data_only_label(label_data):
+        if len(label_data.shape) < 3:
+            label_data = label_data.unsqueeze(dim=0)
+
+        patients, visits, label = label_data.shape
+
+        formatted_input_data = torch.zeros_like(label_data)
+
+        for p in range(patients):
+            visit = label_data[p]
+
+            updated_input_data = torch.concatenate((torch.tensor([[0]]), visit[:-1]))
+
+            formatted_input_data[p] = updated_input_data
+
+        return formatted_input_data

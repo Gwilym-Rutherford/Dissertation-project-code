@@ -2,7 +2,7 @@ from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
 from src.model import DMOLSTM
 from src.core.enums import MileStone
 from src.model import lstm_regression
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from torch.utils.data import TensorDataset, DataLoader
 from torchmetrics.regression import R2Score
 
@@ -144,7 +144,7 @@ for patient_index in range(n_patients):
     test_label = dmo_labels[patient_index].unsqueeze(dim=0)
 
     # fit and transform scaler on training data only
-    scaler = MinMaxScaler()
+    scaler = MinMaxScaler(feature_range=(0, 1))
     patients, visit, day, features = train_data.shape
     train_data_2d = train_data.reshape(patients * visit * day, features)
     train_data_2d_scaled = scaler.fit_transform(train_data_2d)
@@ -172,6 +172,7 @@ for patient_index in range(n_patients):
     test_data = torch.from_numpy(test_data)
     test_label = torch.from_numpy(test_label)
 
+
     # format data
     train_data = format_input_data(train_data, train_label)
     test_data = format_input_data(test_data, test_label)
@@ -180,8 +181,16 @@ for patient_index in range(n_patients):
     training_dataset = TensorDataset(train_data, train_label)
     testing_dataset = TensorDataset(test_data, test_label)
 
-    training_dataloader = DataLoader(training_dataset, batch_size=config.batch_size)
-    testing_dataloader = DataLoader(testing_dataset, batch_size=config.batch_size)
+    training_dataloader = DataLoader(training_dataset, batch_size=config.batch_size, shuffle=True)
+    testing_dataloader = DataLoader(testing_dataset, batch_size=config.batch_size, shuffle=True)
+
+    # for a, b in training_dataloader:
+    #     print(a.shape)
+    #     print(b.shape)
+    #     for c, d in testing_dataloader:
+    #         print(c.shape)
+    #         print(d.shape)
+    #         quit()
 
 
     model = DMOLSTM(config).to(device=device)
@@ -193,6 +202,10 @@ for patient_index in range(n_patients):
         for data, label in training_dataloader:
             data = data.to(device=device, dtype=torch.float32)
             label = label.to(device=device, dtype=torch.float32)
+            print(label.shape)
+            print(label)
+            quit()
+            
             label = label[:, 4, 0]
 
 

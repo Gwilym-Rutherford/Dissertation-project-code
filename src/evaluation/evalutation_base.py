@@ -9,6 +9,7 @@ import torch
 
 
 class Evaluation(ABC):
+<<<<<<< Updated upstream
     NUM_CLASSES = 85
     MAX_FATIGUE_SCORE = 84
 
@@ -19,6 +20,11 @@ class Evaluation(ABC):
 
         self.preds = predictions.squeeze() * Evaluation.MAX_FATIGUE_SCORE
         self.labels = torch.tensor(labels) * Evaluation.MAX_FATIGUE_SCORE
+=======
+    def __init__(self, predictions: torch.Tensor, labels: torch.Tensor):
+        self.preds = predictions
+        self.labels = labels
+>>>>>>> Stashed changes
 
     def compute_all_metrics(self) -> dict:
 
@@ -31,7 +37,7 @@ class Evaluation(ABC):
         return metric_values
 
     def accuracy(self) -> float:
-        threshold = 0.1 * Evaluation.MAX_FATIGUE_SCORE
+        threshold = 0.1
         total_correct = 0
 
         for i in range(len(self.preds)):

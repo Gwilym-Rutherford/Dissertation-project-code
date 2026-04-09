@@ -28,3 +28,13 @@ class Day(Enum):
 class UniformMethod(Enum):
     DOWNSAMPLE = 1
     UPSAMPLE = 2
+
+class PatientDataType(Enum):
+    META = "meta"
+    DMO = "dmo"
+    SENSOR = "sensor"
+    MILESTONE = "milestone"
+
+class DataFrequency(Enum):
+    WEEKLY = "weekly"
+    DAILY = "daily"

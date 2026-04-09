@@ -1,5 +1,6 @@
 from .lstm import DMOLSTM
 from .random_forest_classifier import DMORandomForest
+from .random_forest_regressor import DMORandomForestRegressor
 
 from .model_config import lstm_regression
 from .model_config import lstm_scale

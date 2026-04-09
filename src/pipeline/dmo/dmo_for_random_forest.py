@@ -4,6 +4,8 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
 from ..split_data import split_data
 
+import torch
+
 
 
 def dmo_for_random_forest(
@@ -14,9 +16,7 @@ def dmo_for_random_forest(
     # validation set not needed
     validation: float = 0,
     test: float = 0.20,
-) -> tuple[DataLoader, DataLoader, DataLoader]:
-
-    dmo_data, dmo_labels = Transform.clean_dmo_data(dmo_data, dmo_labels)
+) -> tuple[tuple[torch.Tensor, torch.Tensor], tuple[torch.Tensor, torch.Tensor]]:
 
     train_data, validation_data, test_data = split_data(
         dmo_data, training, validation, test

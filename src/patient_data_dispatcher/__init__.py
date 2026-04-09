@@ -1,2 +1,1 @@
 from .patient_data_dispatcher import PatientDataDispatcher
-from .patient_data_types import PatientDataType

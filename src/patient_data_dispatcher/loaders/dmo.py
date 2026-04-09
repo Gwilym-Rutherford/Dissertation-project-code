@@ -1,6 +1,6 @@
 from .base import BaseLoader
 from src.core.types import DMOFeatures, ListIds, CSVData
-from src.core.enums import MileStone
+from src.core.enums import MileStone, DataFrequency
 from src.core.data_transforms import Transform
 
 import pandas as pd
@@ -15,11 +15,14 @@ class DMOLoader(BaseLoader):
         config_path: str,
         milestone: MileStone,
         metadata: CSVData,
+        data_frequency: DataFrequency,
+        filtered: bool,
         dmo_features: DMOFeatures = None,
     ) -> None:
         super().__init__(config_path)
         self.path = self.config["paths"]["dmo_data_path"]
         self.metadata = metadata
+        self.data_frequency = data_frequency
 
         if milestone == MileStone.ALL:
             self.milestone = [
@@ -38,12 +41,12 @@ class DMOLoader(BaseLoader):
             self.dmo_features = None
 
     def __call__(
-        self, ids: ListIds, static_features: pd.DataFrame
+        self, ids: ListIds
     ) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
-        return self.get_dmo_data(ids, static_features)
+        return self.get_dmo_data(ids)
 
     def get_dmo_data(
-        self, ids: ListIds, static_features: pd.DataFrame
+        self, ids: ListIds
     ) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
 
         dir_list = os.listdir(self.path)
@@ -69,16 +72,6 @@ class DMOLoader(BaseLoader):
             quit(-1)
 
         filtered_by_ids = dmo_data[dmo_data["participant_id"].isin(ids)]
-
-        # add static features like age, width and height
-        filtered_by_ids = pd.merge(
-            filtered_by_ids,
-            static_features,
-            left_on="participant_id",
-            right_on="Local.Participant",
-            how="left",
-        )
-        filtered_by_ids = filtered_by_ids.drop(columns=['Local.Participant'])
 
 
         # get selected dmo features or all

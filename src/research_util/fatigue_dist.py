@@ -1,5 +1,5 @@
-from src.patient_data_dispatcher import PatientDataDispatcher, PatientDataType
-from src.core.enums import MileStone
+from src.patient_data_dispatcher import PatientDataDispatcher
+from src.core.enums import MileStone, PatientDataType
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -9,22 +9,9 @@ import torch
 
 
 class Evaluation(ABC):
-<<<<<<< Updated upstream
-    NUM_CLASSES = 85
-    MAX_FATIGUE_SCORE = 84
-
-    def __init__(self, predictions: torch.Tensor, labels: torch.Tensor, scale=False):
-
-        if not scale:
-            Evaluation.MAX_FATIGUE_SCORE = 1
-
-        self.preds = predictions.squeeze() * Evaluation.MAX_FATIGUE_SCORE
-        self.labels = torch.tensor(labels) * Evaluation.MAX_FATIGUE_SCORE
-=======
     def __init__(self, predictions: torch.Tensor, labels: torch.Tensor):
         self.preds = predictions
         self.labels = labels
->>>>>>> Stashed changes
 
     def compute_all_metrics(self) -> dict:
 

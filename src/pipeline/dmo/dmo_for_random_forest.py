@@ -12,11 +12,18 @@ def dmo_for_random_forest(
     dmo_data: DMOTensor,
     dmo_labels: DMOTensor,
     transforms: tuple[list[callable], list[callable]],
+    normalise: bool = True,
     training: float = 0.8,
     # validation set not needed
     validation: float = 0,
     test: float = 0.20,
 ) -> tuple[tuple[torch.Tensor, torch.Tensor], tuple[torch.Tensor, torch.Tensor]]:
+
+    if normalise:
+        # min max normalise labels globally
+        transform = Transform()
+        dmo_labels = transform.fit_transform_dmo_data(dmo_labels)
+
 
     train_data, validation_data, test_data = split_data(
         dmo_data, training, validation, test
@@ -25,6 +32,14 @@ def dmo_for_random_forest(
     train_label, validation_label, test_label = split_data(
         dmo_labels, training, validation, test
     )
+
+    if normalise:
+        # fit standard scaler on training data only
+        transform.fit_standard_scaler(train_data)
+        train_data = transform.transform_standard_scaler(train_data)
+
+        # apply fit to testing data
+        test_data = transform.transform_standard_scaler(test_data)
 
     dmo_data_transform, dmo_label_transform = transforms
 

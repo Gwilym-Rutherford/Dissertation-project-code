@@ -41,9 +41,7 @@ class DMOLSTM(nn.Module):
 
         output, (h_n, c_n) = self.lstm(x, (h_0, c_0))
 
-        last_hidden = h_n[-1]
-
-        out = self.linear(last_hidden)
+        out = self.linear(output)
         out = self.relu(out)
 
         return out

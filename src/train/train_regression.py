@@ -78,7 +78,7 @@ class TrainRegression:
                 if data_transform:
                     data = data_transform(data)
 
-                pred = self.model(data).squeeze(dim=0)
+                pred = self.model(data)
 
                 if pred_transform:
                     pred = pred_transform(pred)
@@ -89,8 +89,8 @@ class TrainRegression:
                 pred = pred.cpu()
                 label = label.cpu()
 
-                model_prediction.append(pred[0])
-                actual_value.append(label[0])
+                model_prediction += pred
+                actual_value += label
 
         if self.verbose:
             print(f"Testing loss: {np.average(testing_loss)}")

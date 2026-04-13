@@ -22,6 +22,7 @@ class MileStoneLoader(BaseLoader):
         filtered: bool,
         dmo_features: DMOFeatures = None,
         static_features: list[str] = None,
+        physical_subset: bool = True,
     ) -> None:
         super().__init__(config_path)
         self.path = self.config["paths"]["dmo_data_path"]
@@ -30,6 +31,7 @@ class MileStoneLoader(BaseLoader):
         self.data_frequency = data_frequency
         self.filtered = "filtered" if filtered else "all"
         self.static_features = static_features
+        self.physical_subset = physical_subset
 
         if milestone == MileStone.ALL:
             self.milestone = [
@@ -49,6 +51,35 @@ class MileStoneLoader(BaseLoader):
 
     def __call__(self, ids: ListIds) -> CSVData | tuple[torch.Tensor, torch.Tensor]:
         return self.get_dmo_data(ids)
+
+    def _get_physical_score(self, subset):
+        conversion = {
+            "Never": 0,
+            "Rarely": 1,
+            "Sometimes": 2,
+            "Often": 3,
+            "Almost always": 4,
+        }
+
+        physical_columns = [
+            "CLUMSY1L",
+            "PACESF1L",
+            "PHYEFF1L",
+            "MNTPHY1L",
+            "MSWEAK1L",
+            "PHYUNC1L",
+            "TSKPHY1L",
+            "LIMPHY1L",
+            "RSTMRE1L",
+        ]
+
+        fatigue = subset["MFISTO1N"].iloc[0]
+        if pd.isna(fatigue):
+            return -1
+
+        physical = subset[physical_columns].replace(conversion).sum(axis=1)
+
+        return physical.iloc[0]
 
     def _get_dmo_data_by_day(self, dmo_data_all_milestones):
 
@@ -212,7 +243,10 @@ class MileStoneLoader(BaseLoader):
                 ]
 
                 if len(subset) == 1:
-                    value = subset["MFISTO1N"].iloc[0]
+                    if self.physical_subset:
+                        value = self._get_physical_score(subset)
+                    else:
+                        value = subset["MFISTO1N"].iloc[0]
                     if pd.isna(value):
                         value = -1
                 else:

@@ -13,6 +13,7 @@ class PatientDataDispatcher:
         data_frequency: DataFrequency = DataFrequency.DAILY,
         filtered: bool = False,
         static_features: list[str] = None,
+        physical_subset: bool = True
     ):
 
         self.metadata = MetaLoader(config_path, MileStone.ALL)(ids=None)
@@ -36,6 +37,7 @@ class PatientDataDispatcher:
                 filtered,
                 dmo_features,
                 static_features=static_features,
+                physical_subset=physical_subset
             ),
         }
 

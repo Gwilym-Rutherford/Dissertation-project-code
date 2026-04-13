@@ -146,30 +146,34 @@ class Transform:
         return label_data
 
     def fit_transform_dmo_data(self, data: DMOTensor):
+        if len(data.shape) < 4:
+            data = data.unsqueeze(dim=0)
+
         self.scaler = MinMaxScaler()
-        # self.scaler = StandardScaler()
 
         patients, visit, day, features = data.shape
         data_2d = data.reshape(patients * visit * day, features)
         data_2d_scaled = self.scaler.fit_transform(data_2d)
         data = data_2d_scaled.reshape(patients, visit, day, features)
 
+        data = torch.squeeze(torch.from_numpy(data), dim=0)
         return data
 
     def transform_dmo_data(self, data: DMOTensor):
         if len(data.shape) > 3:
-            data = data.squeeze(dim=0)
+            data = data.unsqueeze(dim=0)
 
         visit, day, features = data.shape
         data_2d = data.reshape(visit * day, features)
         data_2d_scaled = self.scaler.transform(data_2d)
         data = data_2d_scaled.reshape(visit, day, features)
 
+        data = torch.squeeze(data, dim=0)
+
         return data
 
     def fit_transform_dmo_labels(self, label: DMOTensor):
         self.scaler = MinMaxScaler()
-        # self.scaler = StandardScaler()
 
         patients, visit, value = label.shape
         label_2d = self.scaler.fit_transform(label.reshape(patients * visit, value))
@@ -242,3 +246,19 @@ class Transform:
             formatted_input_data[p] = updated_input_data
 
         return formatted_input_data
+
+    def fit_standard_scaler(self, data):
+        self.scaler = StandardScaler()
+
+        patients, visits, features = data.shape
+        data_2d = data.reshape(patients * visits, features)
+        self.scaler.fit(data_2d)
+
+    def transform_standard_scaler(self, data):
+        patients, visits, features = data.shape
+        data_2d = data.reshape(patients * visits, features)
+        data_2d_transformed = self.scaler.transform(data_2d)
+
+        return torch.from_numpy(
+                data_2d_transformed.reshape(patients, visits, features)
+            )

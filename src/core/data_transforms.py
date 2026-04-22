@@ -220,6 +220,7 @@ class Transform:
         for p in range(patient):
             for v in range(visit):
                 if v == 0:
+                    
                     label = torch.tensor([0])
                 else:
                     label = label_data[p, v - 1]

@@ -160,15 +160,15 @@ class Transform:
         return data
 
     def transform_dmo_data(self, data: DMOTensor):
-        if len(data.shape) > 3:
+        if len(data.shape) < 4:
             data = data.unsqueeze(dim=0)
 
-        visit, day, features = data.shape
-        data_2d = data.reshape(visit * day, features)
+        patient, visit, day, features = data.shape
+        data_2d = data.reshape(patient * visit * day, features)
         data_2d_scaled = self.scaler.transform(data_2d)
-        data = data_2d_scaled.reshape(visit, day, features)
+        data = data_2d_scaled.reshape(patient, visit, day, features)
 
-        data = torch.squeeze(data, dim=0)
+        data = data.squeeze()
 
         return data
 

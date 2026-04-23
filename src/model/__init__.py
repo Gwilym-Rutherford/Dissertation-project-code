@@ -1,4 +1,5 @@
 from .lstm import DMOLSTM
+from .transformer import DMOTransformer
 from .random_forest_classifier import DMORandomForest
 from .random_forest_regressor import DMORandomForestRegressor
 

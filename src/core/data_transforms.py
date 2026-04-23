@@ -167,7 +167,7 @@ class Transform:
         data_2d = data.reshape(patient * visit * day, features)
         data_2d_scaled = self.scaler.transform(data_2d)
         data = data_2d_scaled.reshape(patient, visit, day, features)
-
+        
         data = data.squeeze()
 
         return data

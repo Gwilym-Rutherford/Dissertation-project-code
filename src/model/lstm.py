@@ -42,6 +42,6 @@ class DMOLSTM(nn.Module):
         output, (h_n, c_n) = self.lstm(x, (h_0, c_0))
 
         out = self.linear(output)
-        out = self.relu(out)
+        #out = self.relu(out)
 
         return out

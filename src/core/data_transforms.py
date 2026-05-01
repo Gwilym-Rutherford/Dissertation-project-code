@@ -263,3 +263,30 @@ class Transform:
         return torch.from_numpy(
                 data_2d_transformed.reshape(patients, visits, features)
             )
+
+    @staticmethod
+    def get_patient_visits(dmo_data, dmo_labels, n_visits):
+        feat_valid = (dmo_data != -1).all(dim=-1).all(dim=-1)
+        label_valid = (dmo_labels.squeeze(-1) != -1)
+
+        combined_valid = feat_valid & label_valid
+
+        visit_counts = combined_valid.sum(dim=1)
+        patient_indices = (visit_counts >= n_visits).nonzero(as_tuple=True)[0]
+
+        if len(patient_indices) == 0:
+            return torch.empty(0), torch.empty(0)
+
+        final_feats = []
+        final_labels = []
+
+        for idx in patient_indices:
+            mask = combined_valid[idx] 
+            
+            valid_feats = dmo_data[idx][mask][:n_visits]
+            valid_lbls = dmo_labels[idx][mask][:n_visits]
+
+            final_feats.append(valid_feats)
+            final_labels.append(valid_lbls)
+
+        return torch.stack(final_feats), torch.stack(final_labels)

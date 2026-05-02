@@ -1,3 +1,4 @@
-from .train_random_forest import XVRandomForest
+from .train_regression_rfr_xv import XVRandomForest
 from .train_regression import TrainRegression
-from .train_regression_xv import LSTMRegressionXV
+from .train_regression_lstm_xv import LSTMRegressionXV
+from .train_regression_transformer_xv import TransformerRegressionXV

@@ -36,7 +36,6 @@ class DMOTransformer(nn.Module):
         )
 
         self.linear_out = nn.Linear(d_model, output_size)
-        self.relu = nn.LeakyReLU()
 
         max_len = 5000
         mask = torch.triu(torch.ones(max_len, max_len) * float('-inf'), diagonal=1)
@@ -44,17 +43,16 @@ class DMOTransformer(nn.Module):
 
     def forward(self, x):
         x = x.to(dtype=torch.float32)
-        seq_len = x.size(1)
+        #seq_len = x.size(1)
         
         x = self.linear_in(x)
         x = self.positional_encoder(x)
         
-        mask = self.causal_mask[:seq_len, :seq_len]
+        #mask = self.causal_mask[:seq_len, :seq_len]
         
-        output = self.transformer_encoder(x, mask=mask)
+        output = self.transformer_encoder(x)
         
         out = self.linear_out(output)
-        out = self.relu(out)
         
         return out
         

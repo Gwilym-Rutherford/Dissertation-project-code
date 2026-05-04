@@ -3,11 +3,11 @@ from src.dataset import DMOFatigueDataset
 from torch.utils.data import DataLoader
 from src.core.data_transforms import Transform
 from torchmetrics.regression import R2Score
-
+from torch import nn
 from src.train import TrainRegression
 
 import torch
-
+import shap
 
 class LSTMRegressionXV:
     def __init__(self, dmo_data, dmo_labels, config, device, k=5, seed=1234):
@@ -97,6 +97,26 @@ class LSTMRegressionXV:
             r2 = R2Score()
             self.R2_values.append(r2(prediction, actual).item())
         
+        
+            # get shap values for each fold
+            model.eval()
+            background = train_data.to(device=self.device)
+            wrapped_model = ModelWrapper(model)
+            torch.backends.cudnn.enabled = False
+            explainer = shap.GradientExplainer(wrapped_model, background)
+            fold_shap_values = explainer.shap_values(test_data.to(device=self.device))
+            torch.backends.cudnn.enabled = True
+            self.shap_values.append(fold_shap_values)
+            self.test_inputs.append(test_data)
+            
         return prediction_arr, actual_arr
-                        
+    
+class ModelWrapper(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
 
+    def forward(self, x):
+        full_sequence_out = self.model(x)
+        final_step_out = full_sequence_out[:, -1, :] 
+        return final_step_out

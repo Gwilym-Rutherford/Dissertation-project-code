@@ -85,7 +85,7 @@ class TrainRegression:
 
                 loss = self.config.loss_fn(pred, label)
                 testing_loss.append(loss.item())
-
+                
                 pred = pred.cpu()
                 label = label.cpu()
 

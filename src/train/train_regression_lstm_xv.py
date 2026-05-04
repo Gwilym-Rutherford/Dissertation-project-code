@@ -31,7 +31,7 @@ class LSTMRegressionXV:
         self.dmo_data = self.dmo_data[random_permutation]
         self.dmo_labels = self.dmo_labels[random_permutation]
 
-    def train_cross_validation(self):
+    def train_cross_validation(self, **train_kwargs):
         dmo_data_split = torch.tensor_split(self.dmo_data, self.k_folds)
         dmo_label_split = torch.tensor_split(self.dmo_labels, self.k_folds)
 
@@ -84,11 +84,11 @@ class LSTMRegressionXV:
                 verbose=True,
             )
             
-            trainer.train_loop()
-            prediction, actual = trainer.test_loop()
+            trainer.train_loop(**train_kwargs)
+            prediction, actual = trainer.test_loop(**train_kwargs)
             
-            prediction = torch.cat(prediction).squeeze()
-            actual = torch.cat(actual).squeeze()
+            prediction = torch.cat(prediction).view(-1)
+            actual = torch.cat(actual).view(-1)
             
             prediction_arr.append(prediction)
             actual_arr.append(actual)

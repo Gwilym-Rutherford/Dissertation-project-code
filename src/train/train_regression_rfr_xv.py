@@ -58,6 +58,11 @@ class XVRandomForest():
             patient, visit, features = test_data.shape
             test_input = test_data.reshape(patient * visit, features)
             test_label = test_label.reshape(patient * visit)
+            
+            print("-"*40)
+            print(train_input.shape)
+            print(train_label.shape)
+            print("-"*40)
 
             self.rf_model.train(train_input, train_label)
             score = self.rf_model.score(test_input, test_label)

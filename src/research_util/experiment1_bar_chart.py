@@ -6,10 +6,10 @@ import numpy as np
 # 1. Define the models and the extracted data (Visit Level - MAE)
 models = ['Random Forest', 'LSTM', 'Transformer']
 
-baseline = [0.08, -0.083, 0.079]        # Standard DMO
-multi_visit = [0.14, -0.53, 0.073]      # DMO[1-3] / DMO[1-4]
-delta_first = [-0.07, -0.51, -0.257]    # Delta from First Visit
-delta_prev = [-0.02, -0.46, -0.065]     # Delta from Previous Visit
+baseline = [6.54, 7.00, 6.61]        # Standard DMO
+multi_visit = [6.31, 8.1, 6.44]      # DMO[1-3] / DMO[1-4]
+delta_first = [4.71, 5.54, 4.57]    # Delta from First Visit
+delta_prev = [4.39, 5.46, 4.48]     # Delta from Previous Visit
 
 # 2. Set up the bar chart positioning
 x = np.arange(len(models))  # The label locations
@@ -21,13 +21,13 @@ fig, ax = plt.subplots(figsize=(10, 6))
 # Plotting each group of bars
 # Baseline is grey to be muted, others are distinct colors to stand out
 rects1 = ax.bar(x - 1.5*width, baseline, width, label='Baseline', color='#B0B0B0')
-rects2 = ax.bar(x - 0.5*width, multi_visit, width, label='Visits [1-3]', color='#4A90E2')
+rects2 = ax.bar(x - 0.5*width, multi_visit, width, label='Visits [1-4]', color='#4A90E2')
 rects3 = ax.bar(x + 0.5*width, delta_first, width, label='Δ First Visit', color='#50E3C2')
 rects4 = ax.bar(x + 1.5*width, delta_prev, width, label='Δ Previous Visit', color='#F5A623')
 
 # 4. Add labels, title, and custom x-axis tick labels
-ax.set_ylabel('R2 - Higher is Better', fontsize=12)
-ax.set_title('Model Performance: Baseline vs Temporal Gait Features', fontsize=16, pad=20)
+ax.set_ylabel('MAE - Lower is Better', fontsize=12)
+# ax.set_title('Model Performance: Baseline vs Temporal Gait Features', fontsize=16, pad=20)
 ax.set_xticks(x)
 ax.set_xticklabels(models, fontsize=12)
 

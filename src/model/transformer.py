@@ -43,14 +43,14 @@ class DMOTransformer(nn.Module):
 
     def forward(self, x):
         x = x.to(dtype=torch.float32)
-        #seq_len = x.size(1)
+        seq_len = x.size(1)
         
         x = self.linear_in(x)
         x = self.positional_encoder(x)
         
-        #mask = self.causal_mask[:seq_len, :seq_len]
+        mask = self.causal_mask[:seq_len, :seq_len]
         
-        output = self.transformer_encoder(x)
+        output = self.transformer_encoder(x, mask=mask)
         
         out = self.linear_out(output)
         
